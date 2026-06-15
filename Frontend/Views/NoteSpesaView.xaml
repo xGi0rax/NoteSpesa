@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Ergon.Views.NoteSpesaView"
+			 xmlns:viewmodel="clr-namespace:Ergon.ViewModels"
+			 xmlns:model="clr-namespace:Ergon.Models"
+             xmlns:local="clr-namespace:Ergon.Services"
+             x:DataType="viewmodel:NoteSpesaViewModel"
+             Title="Note spesa"
+			 BackgroundColor="White">
+
+	<Grid RowDefinitions="Auto, *">
+		<!-- Header  -->
+		<Grid Grid.Row="0"
+			  ColumnDefinitions="*, Auto"
+			  Margin="15,10,15,5"
+			  VerticalOptions="Start">
+
+			<!-- Filtro anno  -->
+			<VerticalStackLayout Grid.Column="0" Spacing="5">
+				<Label Text="Filtra per anno" 
+					   FontSize="14"
+					   FontAttributes="Bold" 
+					   TextColor="Black"
+					   Margin="2,0,0,0" />
+
+				<Frame Padding="0" 
+					   BorderColor="{StaticResource Gray200}" 
+					   BackgroundColor="White" 
+					   CornerRadius="8"
+					   HasShadow="False"
+					   HeightRequest="50">
+					<Picker Title="Seleziona anno..." 
+							ItemsSource="{Binding AnniDisponibili}" 
+							SelectedItem="{Binding AnnoSelezionato}"
+							TextColor="Black" 
+							FontSize="16"
+							TitleColor="{StaticResource Gray200}"
+							Margin="10, 0" />
+				</Frame>
+			</VerticalStackLayout>
+
+			<!-- Bottone per caricare tutte  -->
+			<VerticalStackLayout Grid.Column="1" Spacing="5" IsVisible="{Binding HasLocaleNotes}">
+				<Label Text="" 
+					   FontSize="14"
+					   FontAttributes="Bold" 
+					   TextColor="Black"
+					   Margin="10,0,0,0" />
+
+				<Button Grid.Column="1" 
+						Text="{x:Static local:Constants.UPLOAD_ICON}"
+						Style="{x:StaticResource MaterialIcon}"
+						FontSize="30"
+						FontAttributes="Bold"
+						TextColor="White"
+						BackgroundColor="RoyalBlue"
+						WidthRequest="100"
+						HeightRequest="50"
+						CornerRadius="10"
+						VerticalOptions="End"
+						Margin="10,0,0,0"
+						Command="{Binding CaricaTutteSpeseCommand}">
+				</Button>
+			</VerticalStackLayout>
+		</Grid>
+
+		<!-- Lista resoconti mensili -->
+		<CollectionView Grid.Row="1" 
+                        ItemsSource="{Binding ResocontiMensili}" 
+                        SelectionMode="None" 
+                        Margin="15, 10, 15, 10">
+			<CollectionView.Footer>
+				<BoxView HeightRequest="80" BackgroundColor="Transparent" />
+			</CollectionView.Footer>
+
+			<!-- Messaggio quando la lista è vuota -->
+			<CollectionView.EmptyView>
+				<ContentView>
+					<VerticalStackLayout IsVisible="{Binding MostraMessaggioVuoto}" 
+										 HorizontalOptions="Center" 
+										 VerticalOptions="Center" 
+										 Spacing="15">
+						<Label Text="Nessuna nota spesa trovata per l'anno selezionato"
+                               FontSize="16"
+                               TextColor="Gray"
+                               HorizontalOptions="Center"
+                               HorizontalTextAlignment="Center" />
+					</VerticalStackLayout>
+				</ContentView>
+			</CollectionView.EmptyView>
+
+			<!-- Template della singola riga (Resoconto Mensile) -->
+			<CollectionView.ItemTemplate>
+				<DataTemplate x:DataType="model:ResocontoMensile">
+					<VerticalStackLayout Margin="0, 5">
+						<Frame CornerRadius="10" BorderColor="{StaticResource Gray200}" BackgroundColor="White" Padding="15, 12, 15, 12">
+
+							<!-- Effetto click sulla card -->
+							<Frame.GestureRecognizers>
+								<TapGestureRecognizer Tapped="OnFrameTapped"
+													  Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:NoteSpesaViewModel}}, Path=ApriDettaglioMeseCommand}" 
+                                                      CommandParameter="{Binding .}"/>
+							</Frame.GestureRecognizers>
+
+							<Grid ColumnDefinitions="*, Auto">
+								<!-- Info del resoconto mensile -->
+								<VerticalStackLayout Grid.Column="0" Spacing="2">
+									<Label Text="{Binding MeseNome}" FontAttributes="Bold" FontSize="Medium" TextColor="Black"/>
+									<Label Text="{Binding Totale, StringFormat='Totale: {0:C}'}" FontSize="Small" TextColor="DarkGray"/>
+									<Label Text="{Binding NumeroSpeseTesto}" FontSize="Small" TextColor="{StaticResource Primary}" FontAttributes="Italic"/>
+								</VerticalStackLayout>
+
+								<!-- Icone a destra -->
+								<VerticalStackLayout Grid.Column="2" 
+											Grid.RowSpan="3" 
+											VerticalOptions="Center" 
+											HorizontalOptions="End"
+											Spacing="5"
+											Margin="0,0,10,0">
+									
+									<!-- Icona di stato non sincronizzato -->
+									<Label Text="{x:Static local:Constants.NOT_SYNC_ICON}" 
+										   Style="{x:StaticResource MaterialIcon}" 
+										   TextColor="#e00404"
+										   HorizontalOptions="End"
+										   WidthRequest="25" 
+										   HeightRequest="25" 
+										   VerticalOptions="Center"
+										   Margin="0,5,0,0"
+										   IsVisible="False">
+
+										<Label.Triggers>
+											<DataTrigger TargetType="Label" Binding="{Binding HasLocale}" Value="True">
+												<Setter Property="IsVisible" Value="True" />
+											</DataTrigger>
+										</Label.Triggers>
+									</Label>
+
+									<!-- Freccia a destra per indicare che si può aprire -->
+									<Label Text="{x:Static local:Constants.RIGHT_ARROW_ICON}" 
+										   Style="{x:StaticResource MaterialIcon}" 
+										   VerticalOptions="Center" 
+										   TextColor="{StaticResource Primary}"/>
+								</VerticalStackLayout>
+							</Grid>
+						</Frame>
+					</VerticalStackLayout>
+				</DataTemplate>
+			</CollectionView.ItemTemplate>
+		</CollectionView>
+
+		<!-- Schermata di caricamento -->
+		<Grid Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsLoading}" BackgroundColor="White" ZIndex="10">
+			<VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="15">
+				<ActivityIndicator IsRunning="{Binding IsLoading}" Color="{StaticResource Primary}" HeightRequest="50" WidthRequest="50" />
+				<Label Text="Caricamento in corso..."
+					   TextColor="{StaticResource Primary}" 
+					   HorizontalOptions="Center"
+					   FontAttributes="Bold" 
+					   FontSize="16"/>
+			</VerticalStackLayout>
+		</Grid>
+
+		<!-- Bottone per creare una nuova nota spesa -->
+		<Button Text="+"
+				Grid.Row="1"
+				FontSize="24"
+				FontAttributes="Bold"
+				TextColor="White"
+				BackgroundColor="{StaticResource Primary}"
+				WidthRequest="50"
+				HeightRequest="50"
+				CornerRadius="10"
+				HorizontalOptions="End"
+				VerticalOptions="End"
+				Margin="20"
+				Command="{Binding AggiungiNotaSpesaCommand}">
+			<Button.Shadow>
+				<Shadow Brush="Black" Offset="0,5" Radius="5" Opacity="0.3"/>
+			</Button.Shadow>
+		</Button>
+		
+	</Grid>
+</ContentPage>

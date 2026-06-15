@@ -1,0 +1,113 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodel="clr-namespace:Ergon.ViewModels"
+             xmlns:model="clr-namespace:Ergon.Models"
+             x:Class="Ergon.Views.DettaglioMeseView"
+			 xmlns:local="clr-namespace:Ergon.Services"
+             x:DataType="viewmodel:DettaglioMeseViewModel"
+             Title="{Binding TitoloPagina}">
+	<Grid>
+		<RefreshView IsRefreshing="{Binding IsRefreshing}"
+					 Command="{Binding RefreshDataCommand}"
+					 RefreshColor="{StaticResource Primary}"
+					 Margin="10">
+			
+			<CollectionView ItemsSource="{Binding ListaSpese}" SelectionMode="Single">
+				<CollectionView.ItemsLayout>
+					<LinearItemsLayout Orientation="Vertical" ItemSpacing="10" />
+				</CollectionView.ItemsLayout>
+				<CollectionView.Footer>
+					<BoxView HeightRequest="80" BackgroundColor="Transparent" />
+				</CollectionView.Footer>
+
+				<CollectionView.ItemTemplate>
+					<DataTemplate x:DataType="model:SpesaDettaglio">
+						<Border Padding="15" 
+								Stroke="#E0E0E0" 
+								StrokeThickness="1" 
+								BackgroundColor="White"
+								Margin="0">
+							<Border.StrokeShape>
+								<RoundRectangle CornerRadius="10" />
+							</Border.StrokeShape>
+
+							<Border.Shadow>
+								<Shadow Brush="Black" Offset="0,2" Radius="4" Opacity="0.1" />
+							</Border.Shadow>
+
+							<Border.GestureRecognizers>
+								<TapGestureRecognizer 
+									Tapped="OnFrameTapped"
+									Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:DettaglioMeseViewModel}}, Path=ModificaSpesaCommand}"
+									CommandParameter="{Binding .}" />
+							</Border.GestureRecognizers>
+							<Grid ColumnDefinitions="Auto, *, Auto" RowDefinitions="Auto, Auto, Auto">
+
+								<!-- Colonna 1: Data -->
+								<Label Grid.RowSpan="3" Text="{Binding da_data, StringFormat='{0:dd}'}" 
+									   FontSize="24" FontAttributes="Bold" VerticalOptions="Center" Margin="0,0,15,0"/>
+
+								<!-- Colonna 2: Mese e anno, Tipologia e Cliente -->
+								<Label Grid.Column="1" Grid.Row="0" 
+									   Text="{Binding Source={RelativeSource AncestorType={x:Type viewmodel:DettaglioMeseViewModel}}, Path=TitoloPagina}"
+									   FontSize="12" TextColor="Gray"/>
+								<Label Grid.Column="1" Grid.Row="1" 
+									   Text="{Binding tipologia}" 
+									   FontAttributes="Bold" FontSize="16"
+									   Margin="0, 2, 0, 0"/>
+								<Label Grid.Column="1" Grid.Row="2" 
+									   Text="{Binding ClienteNome}" 
+									   FontSize="13" TextColor="Gray"
+									   Margin="0, 2, 10, 0"/>
+
+
+								<!-- Colonna 3: Importo e Icona Sync -->
+								<StackLayout Grid.Column="2" Grid.RowSpan="3" VerticalOptions="Center" HorizontalOptions="End">
+									<!-- Icona di stato -->
+									<Label Text="{x:Static local:Constants.NOT_SYNC_ICON}" 
+										   Style="{x:StaticResource MaterialIcon}" 
+										   TextColor="#e00404"
+										   HorizontalOptions="End"
+										   WidthRequest="25" 
+										   HeightRequest="25" 
+										   VerticalOptions="Center"
+										   Margin="0,5,0,0"
+										   IsVisible="False">
+
+										<Label.Triggers>
+											<DataTrigger TargetType="Label" Binding="{Binding IsLocale}" Value="True">
+												<Setter Property="IsVisible" Value="True" />
+											</DataTrigger>
+										</Label.Triggers>
+									</Label>
+
+									<Label Text="{Binding importo, StringFormat='{0:F2} €'}" 
+										   FontSize="18" FontAttributes="Bold" HorizontalTextAlignment="End"/>
+								</StackLayout>
+
+							</Grid>
+						</Border>
+					</DataTemplate>
+				</CollectionView.ItemTemplate>
+			</CollectionView>
+		</RefreshView>
+
+		<!-- Bottone aggiungi nuova nota -->
+		<Button Text="+"
+				FontSize="24"
+				FontAttributes="Bold"
+				TextColor="White"
+				BackgroundColor="{StaticResource Primary}"
+				WidthRequest="50"
+				HeightRequest="50"
+				CornerRadius="10"
+				HorizontalOptions="End"
+				VerticalOptions="End"
+				Margin="20"
+				Command="{Binding AggiungiNotaSpesaCommand}">
+			<Button.Shadow>
+				<Shadow Brush="Black" Offset="0,5" Radius="5" Opacity="0.3"/>
+			</Button.Shadow>
+		</Button>
+	</Grid>
+</ContentPage>

@@ -1,0 +1,1 @@
+ngrok http https://localhost:44374 --host-header=rewrite

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodel="clr-namespace:Ergon.ViewModels"
+             xmlns:model="clr-namespace:Ergon.Models"
+             x:DataType="viewmodel:ClientiNoteListViewModel"
+             x:Class="Ergon.Views.ClientiNoteListView"
+             xmlns:ios="clr-namespace:Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;assembly=Microsoft.Maui.Controls"
+             Title="Seleziona Cliente">
+
+	<Grid RowDefinitions="Auto, *" RowSpacing="10" BackgroundColor="White">
+
+		<!-- Barra di Ricerca -->
+		<Frame Grid.Row="0" Padding="0" BackgroundColor="White">
+			<Frame.Margin>
+				<OnPlatform x:TypeArguments="Thickness">
+					<On Platform="Android" Value="10, 10, 10, 0"/>
+					<On Platform="iOS" Value="0, 0, 0, -10"/>
+				</OnPlatform>
+			</Frame.Margin>
+			<Frame.BorderColor>
+				<OnPlatform x:TypeArguments="Color">
+					<On Platform="Android" Value="DarkGray"/>
+					<On Platform="iOS" Value="Transparent"/>
+				</OnPlatform>
+			</Frame.BorderColor>
+
+			<SearchBar Placeholder="Cerca cliente..." 
+                       BackgroundColor="White" 
+                       TextColor="Black" 
+                       Margin="5" 
+                       ios:SearchBar.SearchBarStyle="Minimal"
+                       Text="{Binding SearchText}" 
+                       SearchCommand="{Binding ApplyFilterCommand}" />
+		</Frame>
+
+		<!-- Lista Risultati -->
+		<CollectionView Grid.Row="1" 
+                        ItemsSource="{Binding ClientiFiltrati}" 
+						SelectionMode="None"
+                        Margin="10, 0, 10, 0">
+			<CollectionView.EmptyView>
+				<ContentView>
+					<VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Margin="0,50,0,0">
+						<Label Text="Nessun cliente trovato con i criteri inseriti."
+                               TextColor="Gray"
+                               FontAttributes="Italic"
+                               HorizontalTextAlignment="Center" />
+					</VerticalStackLayout>
+				</ContentView>
+			</CollectionView.EmptyView>
+
+			<CollectionView.ItemTemplate>
+				<DataTemplate x:DataType="model:Cliente">
+					<Grid RowDefinitions="*, 10">
+						<Frame Padding="15" CornerRadius="10" BorderColor="DarkGray" BackgroundColor="White" Grid.Row="0">
+							<Frame.GestureRecognizers>
+								<TapGestureRecognizer Tapped="TapGestureRecognizer_Tapped" CommandParameter="{Binding .}"/>
+							</Frame.GestureRecognizers>
+
+							<VerticalStackLayout Spacing="5">
+								<Label Text="{Binding descrizione}" FontSize="18" TextColor="Black" FontAttributes="Bold"/>
+								<BoxView HeightRequest="2" Color="DarkGray"/>
+								<Label Text="{Binding indirizzo_completo}" FontSize="14" TextColor="{StaticResource Gray600}"/>
+							</VerticalStackLayout>
+						</Frame>
+					</Grid>
+				</DataTemplate>
+			</CollectionView.ItemTemplate>
+		</CollectionView>
+	</Grid>
+</ContentPage>

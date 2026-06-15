@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<mopups:PopupPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                  xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                  xmlns:mopups="clr-namespace:Mopups.Pages;assembly=Mopups"
+                  xmlns:local="clr-namespace:Ergon.Services"
+                  xmlns:model="clr-namespace:Ergon.Models"
+                  x:Class="Ergon.Views.PopupRiepilogoSincroView"
+                  CloseWhenBackgroundIsClicked="False"
+                  BackgroundColor="#ccd3d3d3">
+
+	<ContentView VerticalOptions="Center" Margin="30">
+		<Frame BorderColor="{StaticResource Gray200}" BackgroundColor="White" CornerRadius="15" Padding="0">
+			<Grid RowDefinitions="Auto, Auto, Auto, Auto" RowSpacing="0">
+
+				<!-- Header -->
+				<VerticalStackLayout Grid.Row="0" Spacing="5" Padding="20, 20, 20, 10">
+					<Label Text="{x:Static local:Constants.UPLOAD_ICON }"
+                           Style="{x:StaticResource MaterialIcon}" 
+                           FontSize="40" 
+                           TextColor="RoyalBlue" 
+                           HorizontalOptions="Center"/>
+					<Label Text="Conferma sincronizzazione" 
+                           FontSize="18" 
+                           FontAttributes="Bold" 
+                           TextColor="Black" 
+                           HorizontalOptions="Center"/>
+					<Label x:Name="SottotitoloLabel"
+                           TextColor="Gray" 
+                           FontSize="14"
+                           HorizontalTextAlignment="Center"/>
+				</VerticalStackLayout>
+
+				<!-- Lista note -->
+				<BoxView Grid.Row="1" HeightRequest="1" BackgroundColor="{StaticResource Gray200}" Margin="15,0"/>
+
+				<CollectionView Grid.Row="2" 
+                                ItemsSource="{Binding .}" 
+                                HeightRequest="180" 
+                                Margin="10,5">
+					<CollectionView.ItemTemplate>
+						<DataTemplate x:DataType="model:SpesaDettaglio">
+							<Grid ColumnDefinitions="*, Auto" Padding="12">
+								<VerticalStackLayout Grid.Column="0">
+									<Label Text="{Binding tipologia}" FontAttributes="Bold" FontSize="Small"/>
+									<Label Text="{Binding da_data, StringFormat='{0:dd/MM/yyyy}'}" FontSize="Caption" TextColor="Gray"/>
+								</VerticalStackLayout>
+								<Label Grid.Column="1" 
+                                       Text="{Binding importo, StringFormat='{0:F2} €'}" 
+                                       VerticalOptions="Center" 
+                                       FontAttributes="Bold"
+                                       FontSize="Small"
+                                       TextColor="Black"/>
+							</Grid>
+						</DataTemplate>
+					</CollectionView.ItemTemplate>
+				</CollectionView>
+
+				<!-- Bottoni -->
+				<Grid Grid.Row="3" ColumnSpacing="15" ColumnDefinitions="*, *" Padding="20">
+					<Button Grid.Column="0" 
+                            Text="ANNULLA" 
+                            TextColor="Black" 
+                            BackgroundColor="{StaticResource Gray200}" 
+                            Clicked="Annulla_Clicked"/>
+					<Button Grid.Column="1" 
+                            Text="CONFERMA" 
+                            TextColor="White" 
+                            BackgroundColor="{StaticResource Primary}" 
+                            Clicked="Sincronizza_Clicked"/>
+				</Grid>
+			</Grid>
+		</Frame>
+	</ContentView>
+</mopups:PopupPage>

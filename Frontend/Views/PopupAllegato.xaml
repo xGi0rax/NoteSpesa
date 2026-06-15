@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<mopups:PopupPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Ergon.Views.PopupAllegato"
+             xmlns:mopups="clr-namespace:Mopups.Pages;assembly=Mopups"
+             BackgroundColor="Transparent"
+             Disappearing="PopupPage_Disappearing">
+    
+    <ContentView HeightRequest="130" VerticalOptions="End" Margin="10, 0, 10, 10">
+        <Frame x:Name="frame" BackgroundColor="White"/>
+    </ContentView>
+    
+</mopups:PopupPage>

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<mopups:PopupPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                  xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                  xmlns:mopups="clr-namespace:Mopups.Pages;assembly=Mopups"
+                  xmlns:local="clr-namespace:Ergon.Services"
+                  x:Class="Ergon.Views.GenericPopupView"
+                  CloseWhenBackgroundIsClicked="False"
+                  BackgroundColor="#ccd3d3d3">
+
+	<ContentView VerticalOptions="Center" Margin="30">
+		<Frame BorderColor="{StaticResource Gray200}" BackgroundColor="White" CornerRadius="15" Padding="20">
+			<Grid RowDefinitions="Auto, Auto, Auto" RowSpacing="20">
+
+				<VerticalStackLayout Grid.Row="0" Spacing="10" HorizontalOptions="Center">
+					<!-- Icona -->
+					<Label x:Name="IconLabel" 
+                           Style="{x:StaticResource MaterialIcon}" 
+                           FontSize="50" 
+                           HorizontalOptions="Center"/>
+					<!-- Titolo -->
+					<Label x:Name="TitleLabel" 
+                           FontSize="20" 
+                           FontAttributes="Bold" 
+                           TextColor="Black" 
+                           HorizontalOptions="Center"/>
+				</VerticalStackLayout>
+
+				<!-- Messaggio -->
+				<Label Grid.Row="1" 
+                       x:Name="MessageLabel" 
+                       TextColor="Gray" 
+                       HorizontalTextAlignment= "Start"
+                       FontSize="16"
+					   Margin="5,0,5,0"/>
+
+				<!-- Bottoni -->
+				<Grid Grid.Row="2" ColumnSpacing="15" ColumnDefinitions="*, *">
+					<Border Grid.Column="0" 
+							x:Name="CancelButton" 
+							BackgroundColor="{StaticResource Gray200}" 
+							StrokeThickness="0"
+							Padding="10, 8"
+							HeightRequest="50">
+						<Border.StrokeShape>
+							<RoundRectangle CornerRadius="10"/>
+						</Border.StrokeShape>
+						<Border.GestureRecognizers>
+							<TapGestureRecognizer Tapped="Cancel_Clicked"/>
+						</Border.GestureRecognizers>
+
+						<VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="2">
+							<Label x:Name="CancelHeaderLabel" TextColor="DimGray" FontSize="11" HorizontalOptions="Center" FontAttributes="Bold"/>
+							<Label x:Name="CancelValueLabel" TextColor="DimGray" FontSize="14" HorizontalOptions="Center" HorizontalTextAlignment="Center"/>
+						</VerticalStackLayout>
+					</Border>
+
+					<Border Grid.Column="1" 
+							x:Name="ConfirmButton" 
+							BackgroundColor="{StaticResource Primary}" 
+							StrokeThickness="0"
+							Padding="10, 8"
+							HeightRequest="50">
+						<Border.StrokeShape>
+							<RoundRectangle CornerRadius="10"/>
+						</Border.StrokeShape>
+						<Border.GestureRecognizers>
+							<TapGestureRecognizer Tapped="Confirm_Clicked"/>
+						</Border.GestureRecognizers>
+
+						<VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="2">
+							<Label x:Name="ConfirmHeaderLabel" TextColor="#F0F0F0" FontSize="11" HorizontalOptions="Center" FontAttributes="Bold"/>
+							<Label x:Name="ConfirmValueLabel" TextColor="White" FontSize="14" HorizontalOptions="Center" HorizontalTextAlignment="Center" FontAttributes="Bold"/>
+						</VerticalStackLayout>
+					</Border>
+				</Grid>
+			</Grid>
+		</Frame>
+	</ContentView>
+</mopups:PopupPage>
