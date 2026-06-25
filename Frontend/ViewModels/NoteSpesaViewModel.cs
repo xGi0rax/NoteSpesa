@@ -26,9 +26,13 @@ namespace Ergon.ViewModels
             !IsLoading && 
             (ResocontiMensili == null || ResocontiMensili.Count == 0);
 
-        // Proprietà per il filtro
+        // Lista anni da mostrare nel menu a tendina
         [ObservableProperty] private ObservableCollection<string> _anniDisponibili;
+
+        // Anno attuale selezionato
         [ObservableProperty] private string? _annoSelezionato;
+
+        // Lista dei resoconti mostrati
         [ObservableProperty] private ObservableCollection<ResocontoMensile> _resocontiMensili;
 
         public bool HasLocaleNotes => ResocontiMensili?.Any(r => r.HasLocale) ?? false;
@@ -120,7 +124,6 @@ namespace Ergon.ViewModels
             }
         }
 
-        // Metodo per ricavare i resconti mensili da mostrare,
         private async Task AggiornaListaUIAsync(bool showLoader = true)
         {
             if (showLoader) IsLoading = true;
@@ -226,10 +229,7 @@ namespace Ergon.ViewModels
             IsLoading = true;
             try
             {
-                // noteNuove sono note create sul telefono e mai inviate al server, quindi id_server = 0
                 var noteNuove = _noteDaSincronizzare.Where(x => x.id_server == 0).ToList();
-
-                // noteModificate sono note già presenti nel server, ma con modifiche presenti solo in locale, qunid id_server > 0
                 var noteModificate = _noteDaSincronizzare.Where(x => x.id_server > 0).ToList();
 
                 var mappaFotoInUscita = noteNuove
@@ -253,7 +253,7 @@ namespace Ergon.ViewModels
                 // Gestione note nuove
                 if (noteNuove.Count > 0)
                 {
-                    bool esitoNuove = await RestService.SalvaNoteSpesa(noteNuove); // Chiamo direttamente SalvaNoteSpesa
+                    bool esitoNuove = await RestService.SalvaNoteSpesa(noteNuove);
                     if (esitoNuove)
                     {
                         await Task.Run(() => App.Database.Delete<SpesaDettaglio>(x => x.IsLocale == true && x.id_server == 0));
@@ -285,13 +285,12 @@ namespace Ergon.ViewModels
 
                 if (tuttoOk)
                 {
-                    bool syncOk = await RestService.GetNoteSpesa(true); // Scarico note aggiornate dal server
+                    bool syncOk = await RestService.GetNoteSpesa(true);
 
                     if (syncOk)
                     {
                         if (mappaFotoInUscita.Count > 0)
                         {
-                            // Prendo le note nuove scaricate (quelle che hanno un nuovo id_server)
                             var noteAppenaScaricate = await Task.Run(() => App.Database.GetAll<SpesaDettaglio>()
                                 .Where(x => x.id_server > 0 && !idServerGiaPresenti.Contains(x.id_server))
                                 .ToList());
@@ -306,8 +305,7 @@ namespace Ergon.ViewModels
 
                                 if (match != null)
                                 {
-                                    // Assegno il percorso locale della foto così da poterla visualizzare
-                                    match.path_scontrino_loc = snapshot.PathLocale; 
+                                    match.path_scontrino_loc = snapshot.PathLocale;
                                     await Task.Run(() => App.Database.Update(match));
 
                                     noteAppenaScaricate.Remove(match);

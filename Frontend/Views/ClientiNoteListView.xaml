@@ -59,9 +59,9 @@
 							</Frame.GestureRecognizers>
 
 							<VerticalStackLayout Spacing="5">
-								<Label Text="{Binding descrizione}" FontSize="18" TextColor="Black" FontAttributes="Bold"/>
-								<BoxView HeightRequest="2" Color="DarkGray"/>
-								<Label Text="{Binding indirizzo_completo}" FontSize="14" TextColor="{StaticResource Gray600}"/>
+								<Label Text="{Binding descrizione}" FontSize="Subtitle" TextColor="Black" FontAttributes="Bold"/>
+								<BoxView HeightRequest="2" BackgroundColor="DarkGray"/>
+								<Label Text="{Binding indirizzo_completo}" FontSize="Small" TextColor="{StaticResource Gray600}"/>
 							</VerticalStackLayout>
 						</Frame>
 					</Grid>

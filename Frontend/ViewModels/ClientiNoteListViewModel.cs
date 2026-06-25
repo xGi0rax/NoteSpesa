@@ -22,15 +22,14 @@ namespace Ergon.ViewModels
             _ = LoadDataAsync();
         }
 
-        // Metodo per caricare tutti clienti dal db locale
         private async Task LoadDataAsync()
         {
             try
             {
                 var dati = await Task.Run(() =>  App.Database.GetAll<Cliente>().OrderBy(x => x.rag_soc).ToList());
-                _allClientiCache = dati; // Li salvo in memoria per velocizzare la ricerca
+                _allClientiCache = dati;
 
-                UpdateVisualList(dati); 
+                UpdateVisualList(dati.Take(200).ToList());
             }
             catch (Exception ex)
             {
@@ -38,24 +37,23 @@ namespace Ergon.ViewModels
             }
         }
 
-        // Metodo per cercare un cliente tramite la barra di ricerca
         partial void OnSearchTextChanged(string value)
         {
-            // Debounce: se l'utente scrive velocemente, annullo la ricerca precedente
+            // DEBOUNCE: Se l'utente scrive velocemente, annullo la ricerca precedente
             _searchCts?.Cancel();
-            _searchCts?.Dispose();
+            _searchCts?.Dispose();      
             _searchCts = new CancellationTokenSource();
 
             var token = _searchCts.Token;
 
-            Task.Delay(500, token).ContinueWith(t =>
+            Task.Delay(300, token).ContinueWith(t =>
             {
                 if (!t.IsCanceled) ApplyFilter();
             }, TaskScheduler.Default);
         }
 
         [RelayCommand]
-        public void ApplyFilter() // Metodo per cercare un cliente in memoria
+        public void ApplyFilter()
         {
             var token = _searchCts?.Token ?? CancellationToken.None;
             var query = SearchText?.Trim().ToUpper() ?? "";
@@ -83,7 +81,7 @@ namespace Ergon.ViewModels
         {
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                ClientiFiltrati = new ObservableCollection<Cliente>(nuoviDati.Take(200)); // Mostro i primi 200 nella lista
+                ClientiFiltrati = new ObservableCollection<Cliente>(nuoviDati.Take(200));
                 IsNoResultsVisible = nuoviDati.Count == 0 && !string.IsNullOrWhiteSpace(SearchText);
             });
         }

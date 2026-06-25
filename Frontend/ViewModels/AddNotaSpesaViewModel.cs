@@ -5,36 +5,38 @@ using Ergon.Services;
 using Ergon.Views;
 using Mopups.Services;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Diagnostics;
-using System.Globalization;
 
 namespace Ergon.ViewModels
 {
     public partial class AddNotaSpesaViewModel: ViewModel
     {
+        #region 1. Servizi e variabili private
         private readonly MediaService _mediaService;
         private SpesaDettaglio? _spesaOriginale;
         private int _codCliIniziale = 0;
+        #endregion
 
+        #region 2. Proprietà osservabili
         [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(IsNotLoading))]
         private bool _isLoading = false;
         [ObservableProperty]
         private string _loadingText = "Attendere...";
-        public bool IsSaved { get; private set; }
 
-        [ObservableProperty] [NotifyPropertyChangedFor(nameof(HaSpeseInLista))]
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HaSpeseInLista))]
         private ObservableCollection<SpesaDettaglio> _speseInserite = new();
 
-        // Proprietà della nota
         [ObservableProperty] private string _pageTitle = "Nuova nota spesa";
         [ObservableProperty] private int _cod_cli;
 
-        // Gestione date
         [ObservableProperty] private DateTime _tempDaData = DateTime.Today;
         [ObservableProperty] private DateTime _tempAData = DateTime.Today;
         public DateTime DataMassima => DateTime.Today;
         [ObservableProperty] private DateTime dataMinima;
+        [ObservableProperty] private DateTime _minAData = DateTime.Today;
+        [ObservableProperty] private bool _isADataPickerVisible = true;
 
         [ObservableProperty] private string? _tempTipologia;
         [ObservableProperty] private int _tempNumDip = 1;
@@ -47,6 +49,20 @@ namespace Ergon.ViewModels
         [ObservableProperty] private string? _tempRagSoc;
         [ObservableProperty] private string? _tempPartitaIva;
 
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(HasFoto), nameof(NotHasFoto), nameof(MostraPlaceholderRemoto))]
+        private string? _tempFotoScontrino;
+        [ObservableProperty]
+        [NotifyPropertyChangedFor(nameof(MostraImmagineLocale), nameof(MostraPlaceholderRemoto), nameof(HasFoto), nameof(NotHasFoto))]
+        private string _fotoVisualizzabilePath = string.Empty;
+
+        public bool MostraImmagineLocale =>
+            !string.IsNullOrWhiteSpace(FotoVisualizzabilePath) &&
+            File.Exists(FotoVisualizzabilePath);
+        public bool MostraPlaceholderRemoto => !MostraImmagineLocale && !string.IsNullOrWhiteSpace(TempFotoScontrino);
+        public bool HasFoto => MostraImmagineLocale || MostraPlaceholderRemoto;
+        public bool NotHasFoto => !HasFoto;
+
         [ObservableProperty] private string? _tempNote;
         [ObservableProperty] private bool _tempFlagPostCaricamento;
 
@@ -55,18 +71,8 @@ namespace Ergon.ViewModels
 
         [ObservableProperty] private string _clienteSelezionatoRagSoc = "Tocca per selezionare...";
 
-        // Proprietà per gestione foto allegata
-        [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(HasFoto), nameof(MostraPlaceholderRemoto))]
-        private string? _tempFotoScontrino;
-        [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(MostraImmagineLocale), nameof(MostraPlaceholderRemoto), nameof(HasFoto))]
-        private string _fotoVisualizzabilePath = string.Empty;
-        public bool MostraImmagineLocale =>
-            !string.IsNullOrWhiteSpace(FotoVisualizzabilePath) &&
-            File.Exists(FotoVisualizzabilePath);
-        public bool MostraPlaceholderRemoto => !MostraImmagineLocale && !string.IsNullOrWhiteSpace(TempFotoScontrino);
-        public bool HasFoto => MostraImmagineLocale || MostraPlaceholderRemoto;
+        public bool IsSaved { get; private set; }
+        public bool IsNotLoading => !IsLoading;
 
         // Proprietà per il riepilogo note aggiunte
         [ObservableProperty] private bool _isRiepilogoVisible = false;
@@ -74,14 +80,16 @@ namespace Ergon.ViewModels
         public bool HaSpeseInLista => SpeseInserite?.Count > 0;
 
         // Proprietà per la modifica
+
         [ObservableProperty] private bool _isEditMode = false;
         [ObservableProperty] private bool _canEdit = true;
         [ObservableProperty] private bool _isLocalSpesa;
-        [ObservableProperty] private bool _isFlagPostVisibile = true;
 
         // Proprietà per l'eliminazione
         [ObservableProperty] private bool _canDeleteLocal = false;
+        #endregion
 
+        #region 3. Inizializzazione
         public AddNotaSpesaViewModel() 
         {
             _mediaService = new MediaService();
@@ -92,55 +100,25 @@ namespace Ergon.ViewModels
             RicercaClientePlanning();
             SetDefaultDataMinima();
 
-            OpzioniTipologia = new ObservableCollection<string>();
-            OpzioniTipoPag = new ObservableCollection<string>();
-            _ = CaricaDecodificheDaDbAsync();
+            OpzioniTipologia =
+            [
+                "Pranzo",
+                "Cena",
+                "Pernottamento",
+                "Rifornimento",
+                "Altro"
+            ];
+
+            OpzioniTipoPag =
+            [
+                "Carta di credito aziendale",
+                "Carta di credito personale",
+                "Contanti"
+            ];
 
             _codCliIniziale = Cod_cli;
 
             IsSaved = false;
-        }
-
-        private async Task CaricaDecodificheDaDbAsync()
-        {
-            try
-            {
-                var tipologie = await Task.Run(() => App.Database.GetAll<SpesaTipologia>().Select(x => x.Descrizione).ToList());
-                var tipiPagamento = await Task.Run(() => App.Database.GetAll<SpesaTipoPagamento>().Select(x => x.Descrizione).ToList());
-
-                var textInfo = System.Globalization.CultureInfo.CurrentCulture.TextInfo;
-                var tipologieFormattate = tipologie
-                    .Select(x => textInfo.ToTitleCase(x.ToLower()))
-                    .ToList();
-
-                MainThread.BeginInvokeOnMainThread(async () =>
-                {
-                    OpzioniTipologia = new ObservableCollection<string>(tipologieFormattate);
-                    OpzioniTipoPag = new ObservableCollection<string>(tipiPagamento);
-
-                    await Task.Delay(50);
-                    if (IsEditMode && _spesaOriginale != null)
-                    {
-                        TempTipologia = !string.IsNullOrWhiteSpace(_spesaOriginale.tipologia)
-                            ? textInfo.ToTitleCase(_spesaOriginale.tipologia.Trim().ToLower())
-                            : string.Empty;
-
-                        TempTipoPag = _spesaOriginale.flag_tipo_pag ?? "";
-                    }
-                    else
-                    {
-                        // Comportamento standard di default quando si inserisce una NUOVA nota spesa
-                        if (string.IsNullOrWhiteSpace(TempTipoPag) && OpzioniTipoPag.Count > 0)
-                        {
-                            TempTipoPag = OpzioniTipoPag.First();
-                        }
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Errore nel caricamento opzioni: {ex.Message}");
-            }
         }
 
         public void CaricaSpesa(SpesaDettaglio spesa)
@@ -179,7 +157,7 @@ namespace Ergon.ViewModels
             _codCliIniziale = Cod_cli;
 
             var cliente = App.Database.GetAll<Cliente>().FirstOrDefault(c => c.cod_cli == spesa.cod_cli);
-            ClienteSelezionatoRagSoc = cliente?.rag_soc ?? "Cliente non trovato";
+            ClienteSelezionatoRagSoc = cliente?.rag_soc ?? "Cliente non trovato";            
         }
 
         private void SetDefaultDataMinima()
@@ -204,9 +182,13 @@ namespace Ergon.ViewModels
             TempPartitaIva = null;
             TempNote = String.Empty;
         }
+        #endregion
 
+        #region 4. Eventi
         partial void OnTempDaDataChanged(DateTime value)
         {
+            MinAData = value;
+
             if (value > TempAData)
             {
                 TempAData = value;
@@ -228,7 +210,9 @@ namespace Ergon.ViewModels
                 });
             }
         }
+        #endregion
 
+        #region 5. Comandi di interfaccia
         [RelayCommand]
         private async Task ApriRicercaClienteAsync()
         {
@@ -311,24 +295,24 @@ namespace Ergon.ViewModels
                     using var cts = new CancellationTokenSource();
                     _ = AnimateLoadingTextAsync("Analisi in corso", cts.Token);
 
-                    var risultato = await RestService.AnalizzaScontrinoAsync(percorsoFinale);
+                    try
+                    {
+                        var datiEstratti = await RestService.AnalizzaScontrinoAsync(percorsoFinale);
 
-                    cts.Cancel();
-                    LoadingText = "Attendere...";
+                        cts.Cancel();
+                        LoadingText = "Attendere...";
 
-                    await Task.Delay(300);
-
-                    if (risultato.IsSuccess) { 
+                        await Task.Delay(300);
                         // Popolazione campi
-                        if (risultato.Dati != null)
+                        if (datiEstratti != null)
                         {
-                            if (risultato.Dati.ImportoTotale.HasValue && risultato.Dati.ImportoTotale > 0)
+                            if (datiEstratti.ImportoTotale.HasValue && datiEstratti.ImportoTotale > 0)
                             {
                                 bool confermato = true;
 
                                 if (TempImporto.HasValue && TempImporto.Value > 0)
                                 {
-                                    string btnNuovo = $"Nuovo\n{risultato.Dati.ImportoTotale.Value:F2} €";
+                                    string btnNuovo = $"Nuovo\n{datiEstratti.ImportoTotale.Value:F2} €";
                                     string btnAttuale = $"Attuale\n{TempImporto.Value:F2} €";
 
                                     var popupImporto = new GenericPopupView(
@@ -343,23 +327,22 @@ namespace Ergon.ViewModels
                                 }
                                 if (confermato)
                                 {
-                                    TempImporto = risultato.Dati.ImportoTotale.Value;
+                                    TempImporto = datiEstratti.ImportoTotale.Value;
                                 }
                             }
 
-                            if (risultato.Dati.DataDocumento.HasValue)
+                            if (datiEstratti.DataDocumento.HasValue)
                             {
                                 bool confermato = true;
-                                DateTime dataSenzaOrario = risultato.Dati.DataDocumento.Value.Date;
 
-                                if (dataSenzaOrario < DataMinima)
+                                if (datiEstratti.DataDocumento.Value < DataMinima)
                                 {
-                                    string btnNuova = $"Nuova\n{dataSenzaOrario:dd/MM/yyyy}";
+                                    string btnNuova = $"Nuova\n{datiEstratti.DataDocumento.Value:dd/MM/yyyy}";
                                     string btnAttuale = $"Attuale\n{TempDaData:dd/MM/yyyy}";
 
                                     var popupData = new GenericPopupView(
                                         "Verifica data spesa",
-                                        $"Dalla foto è stata rilevata una data precedente alla data minima consentita ({DataMinima:dd/MM/yyyy}), vuoi proseguire comunque?",
+                                        "Dalla foto è stata rilevata una data precedente alla data minima consentita, vuoi proseguire comunque?",
                                         Constants.WARNING_ICON,
                                         Colors.Orange,
                                         btnNuova,
@@ -370,58 +353,52 @@ namespace Ergon.ViewModels
 
                                 if (confermato)
                                 {
-                                    if (dataSenzaOrario < DataMinima)
+                                    if (datiEstratti.DataDocumento.Value < DataMinima)
                                     {
-                                        DataMinima = dataSenzaOrario;
+                                        DataMinima = datiEstratti.DataDocumento.Value;
                                     }
-                                    TempDaData = dataSenzaOrario;
-                                    TempAData = dataSenzaOrario;
+                                    TempDaData = datiEstratti.DataDocumento.Value;
+                                    TempAData = datiEstratti.DataDocumento.Value;
                                 }
                             }
 
-                            TempNrDoc = risultato.Dati.NumeroDocumento;
-                            TempDataDoc = risultato.Dati.DataDocumento;
-                            TempRagSoc = risultato.Dati.RagioneSociale;
-                            TempPartitaIva = risultato.Dati.PartitaIva;                            
+                            TempNrDoc = datiEstratti.NumeroDocumento;
+                            TempDataDoc = datiEstratti.DataDocumento;
+                            TempRagSoc = datiEstratti.RagioneSociale;
+                            TempPartitaIva = datiEstratti.PartitaIva;
 
                             await ShowToast("Analisi completata. Controlla i dati precompilati.");
                         }
                         else
                         {
-                            var popupVuoto = new GenericPopupView(
+                            var popupErrore = new GenericPopupView(
                                         "Estrazione non riuscita",
-                                        "L'immagine è stata analizzata, ma non è stato possibile estrarre alcun dato.",
+                                        "Dalla foto non è stato possibile estrarre alcun dato.",
                                         Constants.ERROR_ICON,
                                         Colors.Orange,
                                         "CHIUDI",
                                         null);
-                            await MopupService.Instance.PushAsync(popupVuoto);
-                            await popupVuoto.RispostaTask.Task;
+                            await MopupService.Instance.PushAsync(popupErrore);
+                            await popupErrore.RispostaTask.Task;
                         }
                     }
-                    else if(risultato.IsNetworkError) // Errore di rete
-                    { 
-                        var popupOffline = new GenericPopupView(
-                                    "Problema di connessione",
-                                    "La connessione è caduta o il server è irraggiungibile. La foto è stata allegata, ma dovrai inserire i dati manualmente.",
-                                    Constants.OFFLINE_ICON,
-                                    Colors.Orange,
-                                    "CHIUDI",
-                                    null);
-                        await MopupService.Instance.PushAsync(popupOffline);
-                        await popupOffline.RispostaTask.Task;
-                    }
-                    else // Errore server o eccezione generica
+                    catch (Exception exNetwork)
                     {
-                        var popupErrore = new GenericPopupView(
-                                    "Errore server",
-                                    "Non è stato possibile analizzare lo scontrino. La foto è stata allegata, ma dovrai inserire i dati manualmente.",
-                                    Constants.OFFLINE_ICON,
-                                    Colors.Orange,
-                                    "CHIUDI",
-                                    null);
-                        await MopupService.Instance.PushAsync(popupErrore);
-                        await popupErrore.RispostaTask.Task;
+                        cts.Cancel();
+                        System.Diagnostics.Debug.WriteLine($"Errore di rete durante analisi AI: {exNetwork.Message}");
+
+                        await MainThread.InvokeOnMainThreadAsync(async () =>
+                        {
+                            var popupOffline = new GenericPopupView(
+                                        "Connessione persa",
+                                        "La connessione è caduta durante l'analisi. La foto è stata allegata, ma dovrai inserire i dati manualmente.",
+                                        Constants.OFFLINE_ICON,
+                                        Colors.Orange,
+                                        "CHIUDI",
+                                        null);
+                            await MopupService.Instance.PushAsync(popupOffline);
+                            await popupOffline.RispostaTask.Task;
+                        });
                     }
                 }
                 else
@@ -463,10 +440,6 @@ namespace Ergon.ViewModels
 
             TempFotoScontrino = string.Empty;
             FotoVisualizzabilePath = string.Empty;
-            TempNrDoc = null;
-            TempDataDoc = null;
-            TempRagSoc = null;
-            TempPartitaIva = null;
 
             if (!string.IsNullOrEmpty(fileDaEliminare))
             {
@@ -484,38 +457,13 @@ namespace Ergon.ViewModels
                 }
             }
         }
+        #endregion
 
-        [RelayCommand]
-        private async Task RimuoviNotaDaRiepilogo(SpesaDettaglio spesaDaRimuovere)
-        {
-            if (spesaDaRimuovere == null) return;
-
-            var popupEliminazione = new GenericPopupView(
-                                        "Attenzione",
-                                        "Eliminare definitivamente la spesa inserita?",
-                                        Constants.WARNING_ICON,
-                                        Colors.Orange,
-                                        "SI",
-                                        "ANNULLA");
-            await MopupService.Instance.PushAsync(popupEliminazione);
-            bool continua = await popupEliminazione.RispostaTask.Task;
-
-            if (!continua) return;
-
-            SpeseInserite.Remove(spesaDaRimuovere);
-            OnPropertyChanged(nameof(HaSpeseInLista));
-        }
-
+        #region 6. Logica di business
         [RelayCommand]
         private async Task AggiungiSpesaAllaNota(bool showNotification)
         {
             await AggiungiSpesaLogica(showNotification, true);
-        }
-
-        [RelayCommand]
-        private async Task AggiungiSpesaModifica(bool showNotification)
-        {
-            await AggiungiSpesaModificaLogica(showNotification, true);
         }
 
         private async Task<bool> AggiungiSpesaLogica(bool showNotification = true, bool resetFields = true)
@@ -565,78 +513,6 @@ namespace Ergon.ViewModels
             return true;
         }
 
-        private async Task<bool> AggiungiSpesaModificaLogica(bool showNotification = true, bool resetFields = true)
-        {
-            string? isDatiMancanti = ValidaDati();
-            if (!string.IsNullOrWhiteSpace(isDatiMancanti))
-            {
-                await DisplayAlertWarning(isDatiMancanti);
-                return false;
-            }
-
-            if (_spesaOriginale != null)
-            {
-                bool hasModifiche = HasUnsavedChanges();
-                if (hasModifiche)
-                {
-                    IsLoading = true;
-                    LoadingText = "Salvataggio modifiche...";
-
-                    AggiornaSpesaOriginaleDaUI();
-
-                    bool isOffline = !HasInternetConnection;
-
-                    if (isOffline || _spesaOriginale.IsLocale)
-                    {
-                        _spesaOriginale.IsLocale = true;
-                        await Task.Run(() => App.Database.Update(_spesaOriginale));
-                    }
-                    else
-                    {
-                        await Task.Run(() => App.Database.Update(_spesaOriginale));
-                        bool success = await RestService.ModificaNotaSpesa(_spesaOriginale);
-                        if (!success)
-                        {
-                            _spesaOriginale.IsLocale = true;
-                            await Task.Run(() => App.Database.Update(_spesaOriginale));
-                        }
-                    }
-                    IsLoading = false;
-                }
-
-                if (!SpeseInserite.Any(s => s.id == _spesaOriginale.id))
-                {
-                    SpeseInserite.Add(_spesaOriginale);
-                    OnPropertyChanged(nameof(HaSpeseInLista));
-                }
-
-                TempFlagPostCaricamento = _spesaOriginale.IsLocale;
-
-                if (showNotification)
-                {
-                    string msgToast = hasModifiche
-                        ? "Modifiche salvate. Ora puoi aggiungere una nuova spesa."
-                        : "Nota mantenuta. Ora puoi aggiungere una nuova spesa.";
-                    await ShowToast(msgToast);
-                }
-            }
-
-            if (resetFields)
-            {
-                IsEditMode = false;
-                CanDeleteLocal = false;
-                PageTitle = "Aggiungi spesa alla nota";
-                _spesaOriginale = null;
-                IsFlagPostVisibile = false;
-
-                ResetTempFields();
-                ScrollInAlto = true;
-                ScrollInAlto = false;
-            }
-
-            return true;
-        }
-
         [RelayCommand]
         private async Task SaveAsync()
         {
@@ -657,26 +533,17 @@ namespace Ergon.ViewModels
 
             if (SpeseInserite == null || SpeseInserite.Count == 0) return;
 
-            var speseNuove = SpeseInserite.Where(s => s.id == 0).ToList();
-
-            if (!speseNuove.Any())
-            {
-                await Task.Delay(250);
-                await Shell.Current.Navigation.PopAsync();
-                return;
-            }
-
             LoadingText = "Salvataggio nota spesa...";
             IsLoading = true;
             try
             {
                 if (TempFlagPostCaricamento || !HasInternetConnection) // Salvo la nota solo nel db locale
                 {
-                    foreach (var spesa in speseNuove)
+                    foreach (var spesa in SpeseInserite)
                     {
                         spesa.IsLocale = true;
                     }
-                    await Task.Run(() => App.Database.InsertAll(speseNuove));
+                    await Task.Run(() => App.Database.InsertAll(SpeseInserite.ToList()));
                     Settings.LastPostponedSave = DateTime.Now;
 
                     IsSaved = true;
@@ -692,11 +559,11 @@ namespace Ergon.ViewModels
                                     .Select(x => x.id_server)
                                     .ToHashSet());
 
-                    var speseConFotoInRam = speseNuove
+                    var speseConFotoInRam = SpeseInserite
                                     .Where(s => !string.IsNullOrWhiteSpace(s.path_scontrino_loc))
                                     .ToList();
 
-                    bool successo = await RestService.SalvaNoteSpesa(speseNuove);
+                    bool successo = await RestService.SalvaNoteSpesa(SpeseInserite.ToList());
 
                     if (successo)
                     {
@@ -712,7 +579,7 @@ namespace Ergon.ViewModels
                             {
                                 var match = noteNuoveDalServer.FirstOrDefault(n =>
                                     n.importo == spesaRam.importo &&
-                                    string.Equals(n.tipologia, spesaRam.tipologia, StringComparison.OrdinalIgnoreCase) &&
+                                    n.tipologia == spesaRam.tipologia &&
                                     n.da_data.Date == spesaRam.da_data.Date &&
                                     n.cod_cli == spesaRam.cod_cli);
 
@@ -743,7 +610,6 @@ namespace Ergon.ViewModels
                         return;
                     }
                 }
-                await Task.Delay(250);
                 await Shell.Current.Navigation.PopAsync();
             }
             catch (Exception ex)
@@ -761,7 +627,6 @@ namespace Ergon.ViewModels
         {
             if (!HasUnsavedChanges())
             {
-                await Task.Delay(250);
                 await Shell.Current.Navigation.PopAsync();
                 return;
             }
@@ -869,25 +734,29 @@ namespace Ergon.ViewModels
                 string pathSalvatoInMemoria = _spesaOriginale.path_scontrino_loc ?? "";
                 bool successo = false;
 
-                if (_spesaOriginale.id_server > 0) // controllo se la nota esisteva già sul server
+                if (_spesaOriginale.id_server > 0)
                 {
+                    // La nota esisteva già sul server, quindi faccio un UPDATE
                     successo = await RestService.ModificaNotaSpesa(_spesaOriginale);
                 }
                 else
                 {
+                    // La nota è nata interamente offline, quindi faccio un INSERT
                     var notaDaInviare = new List<SpesaDettaglio> { _spesaOriginale };
                     successo = await RestService.SalvaNoteSpesa(notaDaInviare);
                 }
 
                 if (successo)
                 {
-                    if (_spesaOriginale.id_server > 0) // controllo se ho fatto un update
+                    if (_spesaOriginale.id_server > 0)
                     {
+                        // Se abbiamo fatto un update, spengo il flag locale
                         _spesaOriginale.IsLocale = false;
                         await Task.Run(() => App.Database.Update(_spesaOriginale));
                     }
                     else
                     {
+                        // Se era una nota nuova, cancello il record temporaneo locale (id_server = 0)
                         await Task.Run(() => App.Database.Delete<SpesaDettaglio>(x => x.id == _spesaOriginale.id));
                     }
 
@@ -900,14 +769,14 @@ namespace Ergon.ViewModels
 
                     if (syncOk)
                     {
-                        // Se era una nota nuova, riaggancio il path locale dello scontrino
+                        // Se era una nota NUOVA, riaggancio il path locale dello scontrino
                         if (_spesaOriginale.id_server == 0 && !string.IsNullOrWhiteSpace(pathSalvatoInMemoria))
                         {
                             var notaNuovaDalServer = await Task.Run(() => App.Database.GetAll<SpesaDettaglio>()
                                 .FirstOrDefault(x => x.id_server > 0 &&
                                     !idGiaPresenti.Contains(x.id_server) &&
                                     x.importo == _spesaOriginale.importo &&
-                                    string.Equals(x.tipologia, _spesaOriginale.tipologia, StringComparison.OrdinalIgnoreCase) &&
+                                    x.tipologia == _spesaOriginale.tipologia &&
                                     x.da_data.Date == _spesaOriginale.da_data.Date &&
                                     x.cod_cli == _spesaOriginale.cod_cli));
 
@@ -920,7 +789,6 @@ namespace Ergon.ViewModels
 
                         await ShowToast("Nota inviata e dati aggiornati!");
                         IsSaved = true;
-                        await Task.Delay(250);
                         await Shell.Current.Navigation.PopAsync();
                     }
                 }
@@ -978,7 +846,6 @@ namespace Ergon.ViewModels
 
                     IsSaved = true;
                     await ShowToast("Nota spesa eliminata correttamente.");
-                    await Task.Delay(250);
                     await Shell.Current.Navigation.PopAsync();
                 }
             }
@@ -992,6 +859,9 @@ namespace Ergon.ViewModels
             }
         }
 
+        #endregion
+
+        #region 7. Metodi di supporto
         private string? ValidaDati()
         {
             if (Cod_cli <= 0) return
@@ -1005,9 +875,6 @@ namespace Ergon.ViewModels
 
             if (string.IsNullOrWhiteSpace(TempTipologia))
                 return "Seleziona una tipologia di spesa.";
-
-            if (TempTipologia == "Pernottamento" && TempDaData == TempAData)
-                return "La data di check-in deve essere diversa dalla data di check-out.";
 
             if (string.IsNullOrWhiteSpace(TempTipoPag))
                 return "Seleziona il metodo di pagamento.";
@@ -1027,24 +894,6 @@ namespace Ergon.ViewModels
             if (!string.IsNullOrWhiteSpace(TempNote) && TempNote.Length > 255)
                 return "Le note sono troppo lunghe.";
 
-            if (!TempFlagPostCaricamento) // Controllo che siano popolati i campi solo se il flag non è attivato
-            {
-                if (string.IsNullOrWhiteSpace(TempFotoScontrino))
-                    return "Allega una foto dello scontrino.";
-
-                if (string.IsNullOrWhiteSpace(TempNrDoc))
-                    return "Immetti il numero del documento.";
-
-                if (TempDataDoc == null)
-                    return "Immetti la data del documento.";
-
-                if (string.IsNullOrWhiteSpace(TempRagSoc))
-                    return "Immetti la ragione sociale.";
-
-                if (string.IsNullOrWhiteSpace(TempPartitaIva))
-                    return "Immetti la partita IVA.";
-            }
-
             return null; // Tutto OK
         }
 
@@ -1052,7 +901,6 @@ namespace Ergon.ViewModels
         {
             if (!CanEdit) return false;
 
-            // Controllo cambiamenti in modalità modifica
             if (IsEditMode && _spesaOriginale != null)
             {
                 return TempTipologia != _spesaOriginale.tipologia ||
@@ -1071,7 +919,6 @@ namespace Ergon.ViewModels
                        TempPartitaIva != _spesaOriginale.partita_iva;
             }
 
-            // Controllo cambiamenti in inserimento nota nuova
             bool headerChanged = Cod_cli != _codCliIniziale;
             bool hasLines = SpeseInserite.Count > 0;
             bool hasTempData = !string.IsNullOrWhiteSpace(TempTipologia) ||
@@ -1157,5 +1004,6 @@ namespace Ergon.ViewModels
                 }
             }
         }
+        #endregion
     }
 }

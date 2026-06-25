@@ -10,13 +10,12 @@
 			 BackgroundColor="White">
 
 	<Grid RowDefinitions="Auto, *">
-		<!-- Header  -->
+		<!-- Header con menu a tendina per l'anno e bottone carica tutte (se presente) -->
 		<Grid Grid.Row="0"
 			  ColumnDefinitions="*, Auto"
 			  Margin="15,10,15,5"
 			  VerticalOptions="Start">
 
-			<!-- Filtro anno  -->
 			<VerticalStackLayout Grid.Column="0" Spacing="5">
 				<Label Text="Filtra per anno" 
 					   FontSize="14"
@@ -40,9 +39,8 @@
 				</Frame>
 			</VerticalStackLayout>
 
-			<!-- Bottone per caricare tutte  -->
 			<VerticalStackLayout Grid.Column="1" Spacing="5" IsVisible="{Binding HasLocaleNotes}">
-				<Label Text="" 
+				<Label Text="Carica tutte" 
 					   FontSize="14"
 					   FontAttributes="Bold" 
 					   TextColor="Black"
@@ -104,22 +102,21 @@
 							</Frame.GestureRecognizers>
 
 							<Grid ColumnDefinitions="*, Auto">
-								<!-- Info del resoconto mensile -->
+								<!-- Info del mese -->
 								<VerticalStackLayout Grid.Column="0" Spacing="2">
 									<Label Text="{Binding MeseNome}" FontAttributes="Bold" FontSize="Medium" TextColor="Black"/>
 									<Label Text="{Binding Totale, StringFormat='Totale: {0:C}'}" FontSize="Small" TextColor="DarkGray"/>
 									<Label Text="{Binding NumeroSpeseTesto}" FontSize="Small" TextColor="{StaticResource Primary}" FontAttributes="Italic"/>
 								</VerticalStackLayout>
 
-								<!-- Icone a destra -->
-								<VerticalStackLayout Grid.Column="2" 
+								<!-- Freccia a destra per indicare che si può aprire -->
+								<StackLayout Grid.Column="2" 
 											Grid.RowSpan="3" 
 											VerticalOptions="Center" 
 											HorizontalOptions="End"
 											Spacing="5"
 											Margin="0,0,10,0">
-									
-									<!-- Icona di stato non sincronizzato -->
+									<!-- Icona di stato -->
 									<Label Text="{x:Static local:Constants.NOT_SYNC_ICON}" 
 										   Style="{x:StaticResource MaterialIcon}" 
 										   TextColor="#e00404"
@@ -137,12 +134,11 @@
 										</Label.Triggers>
 									</Label>
 
-									<!-- Freccia a destra per indicare che si può aprire -->
 									<Label Text="{x:Static local:Constants.RIGHT_ARROW_ICON}" 
 										   Style="{x:StaticResource MaterialIcon}" 
 										   VerticalOptions="Center" 
 										   TextColor="{StaticResource Primary}"/>
-								</VerticalStackLayout>
+								</StackLayout>
 							</Grid>
 						</Frame>
 					</VerticalStackLayout>
@@ -150,7 +146,6 @@
 			</CollectionView.ItemTemplate>
 		</CollectionView>
 
-		<!-- Schermata di caricamento -->
 		<Grid Grid.Row="0" Grid.RowSpan="2" IsVisible="{Binding IsLoading}" BackgroundColor="White" ZIndex="10">
 			<VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="15">
 				<ActivityIndicator IsRunning="{Binding IsLoading}" Color="{StaticResource Primary}" HeightRequest="50" WidthRequest="50" />
@@ -162,7 +157,6 @@
 			</VerticalStackLayout>
 		</Grid>
 
-		<!-- Bottone per creare una nuova nota spesa -->
 		<Button Text="+"
 				Grid.Row="1"
 				FontSize="24"

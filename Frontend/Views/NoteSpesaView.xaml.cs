@@ -22,15 +22,14 @@ public partial class NoteSpesaView : ContentPage
         }
     }
 
-    // Animazione al tocco di una card resconto mensile
     private async void OnFrameTapped(object sender, EventArgs e)
     {
         if (sender is Frame frame)
         {
-            await frame.FadeTo(0.5, 50, Easing.CubicOut);
-            await frame.ScaleTo(0.98, 50);
-            await frame.ScaleTo(1.00, 50);
-            await frame.FadeTo(1.0, 50, Easing.CubicIn);
+            await frame.FadeTo(0.5, 80, Easing.CubicOut);
+            await frame.ScaleTo(0.98, 80);
+            await frame.ScaleTo(1.00, 80);
+            await frame.FadeTo(1.0, 80, Easing.CubicIn);
         }
     }
 }

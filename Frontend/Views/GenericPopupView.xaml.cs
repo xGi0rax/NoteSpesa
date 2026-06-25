@@ -39,7 +39,7 @@ public partial class GenericPopupView : PopupPage
         }
     }
 
-    private static void ImpostaTestoPulsante(string testo, Label headerLabel, Label valueLabel)
+    private void ImpostaTestoPulsante(string testo, Label headerLabel, Label valueLabel)
     {
         if (string.IsNullOrEmpty(testo)) return;
 
@@ -68,26 +68,5 @@ public partial class GenericPopupView : PopupPage
     {
         await MopupService.Instance.PopAsync();
         RispostaTask.TrySetResult(true);
-    }
-
-    protected override bool OnBackButtonPressed()
-    {
-        if (!RispostaTask.Task.IsCompleted)
-        {
-            RispostaTask.SetResult(false);
-        }
-
-        Mopups.Services.MopupService.Instance.PopAsync();
-        return true;
-    }
-
-    protected override bool OnBackgroundClicked()
-    {
-        if (!RispostaTask.Task.IsCompleted)
-        {
-            RispostaTask.SetResult(false);
-        }
-
-        return base.OnBackgroundClicked();
     }
 }

@@ -2,7 +2,6 @@
 
 namespace ErgonApi.Models
 {
-    // Modello per i dati dello scontrino estratto
     public class ScontrinoEstratto
     {
         public string NumeroDocumento { get; set; }

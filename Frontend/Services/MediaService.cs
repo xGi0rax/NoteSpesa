@@ -9,6 +9,10 @@ namespace Ergon.Services
 {
     public class MediaService
     {
+        /// <summary>
+        /// Analizza l'allegato, verifica le dimensioni e lo ottimizza se è un'immagine.
+        /// Restituisce il percorso fisico finale del file salvato.
+        /// </summary>
         public async Task<string> ProcessAndSaveAttachmentAsync(FileResult result)
         {
             string[] imageExtensions = { ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp" };
@@ -26,6 +30,7 @@ namespace Ergon.Services
 
                 if (kilobytes > 10240) // max 10mb
                 {
+                    // Lancio un'eccezione custom che il ViewModel può catturare per mostrare l'avviso
                     throw new InvalidOperationException("L'allegato è troppo grande: non può superare i 10MB");
                 }
 
@@ -153,7 +158,7 @@ namespace Ergon.Services
             return fotoResult.FullPath;
         }
 
-        private static SKBitmap GestisciRotazioneExif(SKBitmap bitmap, SKEncodedOrigin origin)
+        private SKBitmap GestisciRotazioneExif(SKBitmap bitmap, SKEncodedOrigin origin)
         {
             SKBitmap ruotata;
             switch (origin)

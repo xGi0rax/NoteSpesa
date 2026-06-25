@@ -36,7 +36,6 @@
         public const string INSERISCI_PRENOTAZIONE= "api/prenotazioni/add";
 
         public const string NOTE_SPESA = "api/note-spesa";
-        public const string NOTE_SPESA_DECODIFICHE = "api/note-spesa/decodifiche";
         public const string NOTE_SPESA_SALVA = "api/note-spesa/add";
         public const string NOTE_SPESA_MODIFICA = "api/note-spesa/update";
         public const string NOTE_SPESA_ANALIZZA = "api/note-spesa/analyze";
@@ -79,7 +78,6 @@
         public const string SYNC_ALERT_ICON = "\ue629";
         public const string UPLOAD_ICON = "\ue2c3";
         public const string DELETE_ICON = "\ue872";
-        public const string DELETE_FOREVER_ICON = "\ue92b"; 
         public const string WARNING_ICON = "\ue002";
         public const string ERROR_ICON = "\ue000";
         public const string OFFLINE_ICON = "\ue648";

@@ -2,7 +2,6 @@
 
 namespace ErgonApi.Models
 {
-    // Modello la spesa
     public class SpesaDettaglio
     {
         public int id { get; set; }
