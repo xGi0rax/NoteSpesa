@@ -144,6 +144,8 @@ namespace Ergon.Services
                 Database.DropTable<Cliente>();
                 Database.DropTable<Prenotazione>();
                 Database.DropTable<SpesaDettaglio>();
+                Database.DropTable<SpesaTipologia>();
+                Database.DropTable<SpesaTipoPagamento>();
             }
         }
     }

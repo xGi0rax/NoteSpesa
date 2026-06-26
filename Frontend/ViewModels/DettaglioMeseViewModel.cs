@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Ergon.Models;
+using Ergon.Services;
 using Ergon.Views;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -12,6 +13,11 @@ namespace Ergon.ViewModels
         [ObservableProperty] private string _meseAnno;
         [ObservableProperty] private ObservableCollection<SpesaDettaglio> _listaSpese = new();
         [ObservableProperty] private string? _titoloPagina;
+        [ObservableProperty] private bool _isRefreshing;
+
+        // Easter egg
+        private int _counter = 0;
+        private DateTime? _ultimoTrascinamento = null;
 
         public DettaglioMeseViewModel(string meseAnno)
         {
@@ -57,10 +63,17 @@ namespace Ergon.ViewModels
                     .Where(c => codiciClientiUsati.Contains(c.cod_cli))
                     .ToList();
 
+                var textInfo = CultureInfo.CurrentCulture.TextInfo;
+
                 foreach (var s in spese)
                 {
                     var clienteSpesa = clienti.FirstOrDefault(c => c.cod_cli == s.cod_cli);
                     s.ClienteNome = clienteSpesa?.rag_soc ?? $"Cliente {s.cod_cli} (Non trovato)";
+
+                    if (!string.IsNullOrWhiteSpace(s.tipologia))
+                    {
+                        s.tipologia = textInfo.ToTitleCase(s.tipologia.Trim().ToLower());
+                    }
                 }
 
                 ListaSpese = new ObservableCollection<SpesaDettaglio>(spese);
@@ -76,12 +89,6 @@ namespace Ergon.ViewModels
         {
             var paginaInserimento = new AddNotaSpesaView();
             await Shell.Current.Navigation.PushAsync(paginaInserimento);
-        }
-
-        [RelayCommand]
-        public void RefreshData()
-        {
-            CaricaSpeseDelMese(MeseAnno);
         }
 
         [RelayCommand]

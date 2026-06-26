@@ -13,7 +13,7 @@ namespace Ergon.Services
         {
             var options = new RestClientOptions(new Uri(Constants.URL))
             {
-                Timeout = TimeSpan.FromSeconds(15)
+                Timeout = TimeSpan.FromSeconds(45) // Limite di timeout di 45s per le risposte del backend
             };
             return new RestClient(options); 
         }
@@ -55,6 +55,8 @@ namespace Ergon.Services
                 Settings.Username = username;
                 Settings.Password = password;
 
+                // Recupero i valori per le note spesa
+                await SyncTabelleDecodificaAsync();
                 return true;
             }
             catch
@@ -410,6 +412,51 @@ namespace Ergon.Services
             }
         }
 
+        // NOTE SPESA
+
+        // Metodo per scaricare i valori di Tipologia e Metodi di pagamento dal backend
+        public static async Task<bool> SyncTabelleDecodificaAsync()
+        {
+            if (!Settings.IsLogged) return false;
+
+            object credenziali = new { login = Settings.Username, password = Settings.Password };
+            RestRequest request = CreateBasicAuthRequest(Constants.NOTE_SPESA_DECODIFICHE, Method.Post);
+            request.AddBody(new { credenziali });
+
+            try
+            {
+                RestClient client = GetErgClient();
+                RestResponse response = await client.ExecuteAsync(request);
+
+                if (!response.IsSuccessful || string.IsNullOrWhiteSpace(response.Content)) return false;
+
+                var result = JsonConvert.DeserializeObject<DecodificheResponse>(response.Content);
+
+                if (result != null)
+                {
+                    App.Database.BeginTrans();
+
+                    // Svuoto e ripopolo le tabelle locali
+                    App.Database.DeleteAll<SpesaTipologia>();
+                    App.Database.DeleteAll<SpesaTipoPagamento>();
+
+                    App.Database.InsertAll(result.Tipologie);
+                    App.Database.InsertAll(result.MetodiPagamento);
+
+                    App.Database.CommitTrans();
+                    return true;
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                App.Database.RollbackTrans();
+                Debug.WriteLine($"Errore Sync Decodifiche: {ex.Message}");
+                return false;
+            }
+        }
+
+        // Metodo per scaricare le note spesa
         public static async Task<bool> GetNoteSpesa(bool aggiorna)
         {
             if (!Settings.IsLogged) return false;
@@ -464,15 +511,7 @@ namespace Ergon.Services
                             cod_cli = dto.cod_cli,
                             da_data = dto.da_data,
                             a_data = dto.a_data,
-                            tipologia = dto.tipologia switch
-                            {
-                                "001" => "Pranzo",
-                                "002" => "Cena",
-                                "003" => "Pernottamento",
-                                "004" => "Rifornimento",
-                                "999" => "Altro",
-                                _ => dto.tipologia
-                            },
+                            tipologia = dto.tipologia,
                             tipo_tab_tns = dto.tipo_tab_tns,
                             nr_dip_ergon = dto.nr_dip_ergon,
                             flag_con_cli = (dto.flag_con_cli == "S"),
@@ -480,13 +519,7 @@ namespace Ergon.Services
                             path_scontrino_loc = spesaPrecedente?.path_scontrino_loc,
                             importo = dto.importo,
                             divisa = dto.divisa,
-                            flag_tipo_pag = dto.flag_tipo_pag switch
-                            {
-                                "CC" => "Carta di credito aziendale",
-                                "CP" => "Carta di credito personale",
-                                "CO" => "Contanti",
-                                _ => dto.flag_tipo_pag
-                            },
+                            flag_tipo_pag = dto.flag_tipo_pag,
                             nr_doc_scontrino = dto.nr_doc_scontrino,
                             data_scontrino = dto.data_scontrino,
                             rag_soc_scontrino = dto.rag_soc_scontrino,
@@ -512,6 +545,7 @@ namespace Ergon.Services
             }
         }
 
+        // Metodo per aggiungere una o più note spesa
         public static async Task<bool> SalvaNoteSpesa(List<SpesaDettaglio> noteSpesa)
         {
             try
@@ -571,6 +605,7 @@ namespace Ergon.Services
             }
         }
 
+        // Metodo per modificare una nota spesa
         public static async Task<bool> ModificaNotaSpesa(SpesaDettaglio spesa)
         {
             try
@@ -589,7 +624,7 @@ namespace Ergon.Services
                 }
                 else if (string.IsNullOrWhiteSpace(spesa.foto_scontrino))
                 {
-                    // Caso B: L'utente ha esplicitamente rimosso la foto esistente
+                    // Caso B: L'utente ha rimosso la foto esistente
                     fotoPayload = "CANCELLATA";
                 }
                 else
@@ -645,6 +680,7 @@ namespace Ergon.Services
             }
         }
 
+        // Metodo per modificare più note spesa dopo una modifica in cui si è premuto "AGGIUNGI UN'ALTRA SPESA"
         public static async Task<bool> ModificaNotaSpesaBatch(List<SpesaDettaglio> noteSpesa)
         {
             try
@@ -719,14 +755,24 @@ namespace Ergon.Services
             }
         }
 
-        public static async Task<ScontrinoEstratto?> AnalizzaScontrinoAsync(string imagePath)
+        public static async Task<RisultatoAnalisi> AnalizzaScontrinoAsync(string imagePath)
         {
+            var risultato = new RisultatoAnalisi();
+
             try
             {
-                if (!Settings.IsLogged) return null;
+                if (!Settings.IsLogged)
+                {
+                    risultato.ErrorMessage = "Utente non autenticato";
+                    return risultato;
+                }
 
                 string? base64 = await ImageToBase64Async(imagePath);
-                if (string.IsNullOrWhiteSpace(base64)) return null;
+                if (string.IsNullOrWhiteSpace(base64))
+                {
+                    risultato.ErrorMessage = "Impossibile elaborare l'immagine della fotocamera.";
+                    return risultato;
+                }
 
                 object credenziali = new { login = Settings.Username, password = Settings.Password };
                 object richiesta_analisi = new { FotoBase64 = base64 };
@@ -737,37 +783,55 @@ namespace Ergon.Services
                 RestClient client = GetErgClient();
                 RestResponse response = await client.ExecuteAsync(request);
 
+                // Controllo errori di rete
                 if (response.ResponseStatus == ResponseStatus.TimedOut ||
                     (response.ResponseStatus == ResponseStatus.Error && response.StatusCode == 0))
                 {
-                    if (response.ErrorException != null)
-                        throw response.ErrorException;
-                    else
-                        throw new HttpRequestException("Impossibile raggiungere il server.");
+                    risultato.IsNetworkError = true;
+                    risultato.ErrorMessage = "Impossibile raggiungere il server.";
+                    return risultato;
                 }
 
-                if (response.IsSuccessful && !string.IsNullOrWhiteSpace(response.Content))
+                // Controllo successo HTTP
+                if (response.IsSuccessful)
                 {
-                    return JsonConvert.DeserializeObject<ScontrinoEstratto>(response.Content);
+                    risultato.IsSuccess = true;
+                    if (!string.IsNullOrWhiteSpace(response.Content))
+                    {
+                        risultato.Dati = JsonConvert.DeserializeObject<ScontrinoEstratto>(response.Content);
+                    }
+                    return risultato;
                 }
                 else
                 {
-                    Debug.WriteLine($"Errore analisi scontrino (Server ha risposto): {response.StatusCode} - {response.Content}");
-                    return null; 
+                    risultato.IsServerError = true;
+
+                    string serverMsg = string.IsNullOrWhiteSpace(response.Content)
+                               ? $"Errore server ({(int)response.StatusCode})"
+                               : response.Content.Trim('\"');
+
+                    risultato.ErrorMessage = serverMsg;
+                    Debug.WriteLine($"Errore analisi scontrino dal server: {response.StatusCode} - {response.Content}");
+                    return risultato; 
                 }
-            }
-            catch (HttpRequestException)
-            {
-                throw;
             }
             catch (TaskCanceledException)
             {
-                throw;
+                risultato.IsNetworkError = true;
+                risultato.ErrorMessage = "La richiesta è andata in timeout.";
+                return risultato;
+            }
+            catch (HttpRequestException)
+            {
+                risultato.IsNetworkError = true;
+                risultato.ErrorMessage = "Si è verificato un errore di rete.";
+                return risultato;
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Eccezione generica in AnalizzaScontrinoAsync: {ex.Message}");
-                return null;
+                risultato.ErrorMessage = "Errore imprevisto nell'app durante l'elaborazione.";
+                return risultato;
             }
         }
 
@@ -1096,11 +1160,4 @@ namespace Ergon.Services
             }
         }
     }
-}
-
-public class SyncResponseDto
-{
-    public int id_locale { get; set; }
-    public int id_server { get; set; }
-    public string foto_scontrino { get; set; }
 }

@@ -10,6 +10,7 @@
 			 HideSoftInputOnTapped="True">
 
 	<Grid RowDefinitions="*, Auto, Auto">
+		<!-- Schermata di caricamento -->
 		<Grid Grid.RowSpan="3"
 			IsVisible="{Binding IsLoading}" 
 			BackgroundColor="White" 
@@ -73,9 +74,9 @@
 					</Border>
 				</VerticalStackLayout>
 
-				<!-- Riepilogo -->
+				<!-- Riepilogo spese inserite -->
 				<Border Style="{StaticResource InputBorderStyle}" 
-						Margin="0, -5, 0, 0"
+						Margin="0, -10, 0, 5"
 						Padding="0" 
 						IsVisible="{Binding HaSpeseInLista}">
 
@@ -119,23 +120,39 @@
 								 Margin="12,0"/>
 
 						<VerticalStackLayout IsVisible="{Binding IsRiepilogoVisible}" Padding="5">
-							<CollectionView ItemsSource="{Binding SpeseInserite}" >
-								<CollectionView.ItemTemplate>
+							<VerticalStackLayout BindableLayout.ItemsSource="{Binding SpeseInserite}" >
+								<BindableLayout.ItemTemplate>
 									<DataTemplate x:DataType="model:SpesaDettaglio">
-										<Grid ColumnDefinitions="*, Auto" Padding="12">
+										<Grid ColumnDefinitions="*, Auto, Auto" Padding="12,8,12,8">
 											<VerticalStackLayout Grid.Column="0">
-												<Label Text="{Binding tipologia}" FontAttributes="Bold" FontSize="Small"/>
+												<Label Text="{Binding tipologia}" FontAttributes="Bold" FontSize="14"/>
 												<Label Text="{Binding da_data, StringFormat='{0:dd/MM/yyyy}'}" FontSize="Caption" TextColor="Gray"/>
 											</VerticalStackLayout>
 											<Label Grid.Column="1" 
 												   Text="{Binding importo, StringFormat='{0:F2} €'}" 
 												   VerticalOptions="Center" 
 												   FontAttributes="Bold"
-												   FontSize="Small"/>
+												   FontSize="14"
+												   Margin="0,1,0,0"/>
+											<Label Grid.Column="2"
+												   Text="{x:Static local:Constants.DELETE_FOREVER_ICON}"
+												   Style="{StaticResource MaterialIcon}"
+												   BackgroundColor="Transparent" 
+												   TextColor="#960018"
+												   FontSize="26"
+												   VerticalOptions="Center"
+												   HorizontalOptions="Center"
+												   Margin="15,0,0,0">
+												<Label.GestureRecognizers>
+													<TapGestureRecognizer 
+														Command="{Binding Path=BindingContext.RimuoviNotaDaRiepilogoCommand, Source={RelativeSource AncestorType={x:Type ContentPage}}}" 
+														CommandParameter="{Binding .}" />
+												</Label.GestureRecognizers>
+											</Label>
 										</Grid>
 									</DataTemplate>
-								</CollectionView.ItemTemplate>
-							</CollectionView>
+								</BindableLayout.ItemTemplate>
+							</VerticalStackLayout>
 						</VerticalStackLayout>
 					</VerticalStackLayout>
 				</Border>
@@ -159,7 +176,7 @@
 										MaximumDate="{Binding DataMassima}"
 										Date="{Binding TempDaData}"
 										Format="dd/MM/yyyy" 
-										Margin="5,0"/>
+										Margin="{OnPlatform iOS='10,0,5,0', Default='5,0'}"/>
 						</Border>
 					</VerticalStackLayout>
 					<VerticalStackLayout Grid.Column="1" Spacing="2">
@@ -176,7 +193,7 @@
 										MaximumDate="{Binding DataMassima}"
 										MinimumDate="{Binding DataMinima}"
 										Format="dd/MM/yyyy" 
-										Margin="5,0"/>
+										Margin="{OnPlatform iOS='10,0,5,0', Default='5,0'}"/>
 						</Border>
 					</VerticalStackLayout>
 				</Grid>
@@ -348,6 +365,20 @@
 							<Label Text="Note" FontAttributes="Bold" Margin="3, 3, 0, 0"/>
 						</HorizontalStackLayout>
 
+						<Label Text="(facoltative) " 
+							   TextColor="Gray" 
+							   FontAttributes="Italic"
+							   IsVisible="True"
+							   Margin="2, 3, 0, 0">
+							<Label.Triggers>
+								<DataTrigger TargetType="Label" 
+											 Binding="{Binding TempTipologia}" 
+											 Value="Altro">
+									<Setter Property="IsVisible" Value="False" />
+								</DataTrigger>
+							</Label.Triggers>
+						</Label>
+
 						<Label Text="*" 
 							   TextColor="Red" 
 							   FontAttributes="Bold"
@@ -377,7 +408,7 @@
 					</Border>
 				</VerticalStackLayout>
 
-				<!-- Nome foto scontrino e bottone aggiunta -->
+				<!-- Sezione scontrino e bottoni -->
 				<Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto, Auto" 
 					  ColumnSpacing="10" RowSpacing="2">
 
@@ -391,6 +422,7 @@
 						<Label Text="Foto scontrino" FontAttributes="Bold" Margin="3, 3, 0, 0"/>
 					</HorizontalStackLayout>
 
+					<!-- Bottone aggiunta -->
 					<Button Grid.Row="0" 
 							Grid.Column="1" 
 							Text="{x:Static local:Constants.ADD_PHOTO_ICON}"
@@ -402,9 +434,16 @@
 							CornerRadius="10"
 							VerticalOptions="Center"
 							Margin="0,5,0,5"
-							IsVisible="{Binding NotHasFoto}"
-							Command="{Binding ScegliFonteFotoCommand}"/>
+							IsVisible="True"
+							Command="{Binding ScegliFonteFotoCommand}">
+						<Button.Triggers>
+							<DataTrigger TargetType="Button" Binding="{Binding HasFoto}" Value="True">
+								<Setter Property="IsVisible" Value="False" />
+							</DataTrigger>
+						</Button.Triggers>
+					</Button>
 
+					<!-- Bottone rimozione -->
 					<Button Grid.Row="0" 
 							Grid.Column="1"
 							Text="{x:Static local:Constants.CLOSE_ICON}"
@@ -420,6 +459,7 @@
 							IsVisible="{Binding HasFoto}"
 							Command="{Binding RimuoviFotoCommand}" />
 
+					<!-- Anteprima scontrino -->
 					<Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" 
 							IsVisible="{Binding MostraImmagineLocale}" 
 							Padding="0" Margin="40,15,40,10" 
@@ -436,6 +476,7 @@
 							   VerticalOptions="Fill" />
 					</Border>
 
+					<!-- Anteprima se immagine non presente -->
 					<Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" 
 							IsVisible="{Binding MostraPlaceholderRemoto}" 
 							Padding="20" Margin="40,15,40,10" 
@@ -455,54 +496,96 @@
 								   FontSize="15"/>
 						</VerticalStackLayout>
 					</Border>
-					
 
+					<!-- Dati estratti dallo scontrino -->
 					<VerticalStackLayout Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" 
                          Spacing="2" 
                          Margin="5, 10, 5, 0"
-                         IsVisible="{Binding MostraImmagineLocale}">
+                         IsVisible="{Binding HasFoto}">
 
-						<Label Text="DATI ESTRATTI" 
-							   FontAttributes="Bold" 
-							   TextColor="{StaticResource Primary}" 
-							   Margin="0,0,0,10"/>
+							
+						<Grid ColumnDefinitions="*, Auto" Margin="0,8,0,12">
+							<Label Grid.Column="0" 
+									Text="DATI DOCUMENTO" 
+									FontAttributes="Bold" 
+									TextColor="{StaticResource Primary}" 
+									VerticalOptions="Center"/>
+								
+							<Label Grid.Column="1"
+									Text="{Binding LockIcon}"
+									Style="{StaticResource MaterialIcon}"
+									BackgroundColor="Transparent" 
+									TextColor="#960018"
+									FontSize="26"
+									VerticalOptions="Center"
+									HorizontalOptions="Center"
+									Margin="0,0,0,0">
+							<Label.Triggers>
+								<DataTrigger TargetType="Label" Binding="{Binding IsDatiEstrattiLocked}" Value="False">
+										<Setter Property="TextColor" Value="{StaticResource Primary}" />
+								</DataTrigger>
+							</Label.Triggers>
+							<Label.GestureRecognizers>
+								<TapGestureRecognizer 
+									Command="{Binding Path=BindingContext.PermettiModificaEstrattiCommand, Source={RelativeSource AncestorType={x:Type ContentPage}}}" />
+							</Label.GestureRecognizers>
+						</Label>
+						</Grid>
+
 
 						<VerticalStackLayout Spacing="2">
 							<Label Text="Numero documento" 
-								   FontAttributes="Bold" 
-								   Margin="3, 0, 0, 0" 
-								   FontSize="Caption" 
-								   TextColor="Black"/>
+									FontAttributes="Bold" 
+									Margin="3, 0, 0, 0" 
+									FontSize="Caption" 
+									TextColor="Black"/>
 							<Border Style="{StaticResource InputBorderStyle}">
 								<Entry Text="{Binding TempNrDoc}" 
-									   Placeholder="N. Documento estratto..." 
-									   Margin="10,0"/>
+										Placeholder="N. Documento estratto..." 
+										Margin="10,0"
+										IsReadOnly="{Binding IsDatiEstrattiLocked}"/>
 							</Border>
 						</VerticalStackLayout>
-						
+
+						<VerticalStackLayout Spacing="2">
+							<Label Text="Data e ora documento" 
+									FontAttributes="Bold" 
+									Margin="3, 0, 0, 0" 
+									FontSize="Caption" 
+									TextColor="Black"/>
+							<Border Style="{StaticResource InputBorderStyle}">
+								<Entry Text="{Binding TempDataDoc}" 
+										Placeholder="Data documento estratto..." 
+										Margin="10,0"
+										IsReadOnly="{Binding IsDatiEstrattiLocked}"/>
+							</Border>
+						</VerticalStackLayout>
+
 						<VerticalStackLayout Spacing="2">
 							<Label Text="Ragione sociale" 
-								   FontAttributes="Bold" 
-								   Margin="3, 0, 0, 0" 
-								   FontSize="Caption" 
-								   TextColor="Black"/>
+									FontAttributes="Bold" 
+									Margin="3, 0, 0, 0" 
+									FontSize="Caption" 
+									TextColor="Black"/>
 							<Border Style="{StaticResource InputBorderStyle}">
 								<Entry Text="{Binding TempRagSoc}" 
-									   Placeholder="Ragione sociale estratta..." 
-									   Margin="10,0"/>
+										Placeholder="Ragione sociale estratta..." 
+										Margin="10,0"
+										IsReadOnly="{Binding IsDatiEstrattiLocked}"/>
 							</Border>
 						</VerticalStackLayout>
 
 						<VerticalStackLayout Spacing="2">
 							<Label Text="Partita IVA" 
-								   FontAttributes="Bold" 
-								   Margin="3, 0, 0, 0"
-								   FontSize="Caption" 
-								   TextColor="Black"/>
+									FontAttributes="Bold" 
+									Margin="3, 0, 0, 0"
+									FontSize="Caption" 
+									TextColor="Black"/>
 							<Border Style="{StaticResource InputBorderStyle}">
 								<Entry Text="{Binding TempPartitaIva}" 
-									   Placeholder="Partita IVA estratta..." 
-									   Margin="10,0"/>
+										Placeholder="Partita IVA estratta..." 
+										Margin="10,0"
+										IsReadOnly="{Binding IsDatiEstrattiLocked}"/>
 							</Border>
 						</VerticalStackLayout>
 					</VerticalStackLayout>
@@ -521,18 +604,21 @@
 					</DataTrigger>
 				</VerticalStackLayout.Triggers>
 
+				<!-- Checkbox per posticipare il caricamento -->
 				<HorizontalStackLayout Grid.Row="0" Grid.ColumnSpan="2" 
 									   VerticalOptions="Center" 
 									   HorizontalOptions="Center" 
-									   Margin="0,0,0,0">
+									   Margin="0,0,0,-15"
+									   IsVisible="{Binding IsFlagPostVisibile}">
 					<CheckBox IsChecked="{Binding TempFlagPostCaricamento}" VerticalOptions="Center" />
 					<Label Text="Posticipa il caricamento" VerticalTextAlignment="Center"/>
 				</HorizontalStackLayout>
 
+				<!-- Bottone aggiungi un'altra spesa -->
 				<Button Text="AGGIUNGI UN'ALTRA SPESA"
 						Command="{Binding AggiungiSpesaAllaNotaCommand}"
 						BackgroundColor="{StaticResource Gray200}" 
-						Margin="20,0,20,5" 
+						Margin="20,15,20,5" 
 						TextColor="Black">
 					<Button.CommandParameter>
 						<x:Boolean>True</x:Boolean>
@@ -545,10 +631,11 @@
 					</Button.ImageSource>
 				</Button>
 
+				<!-- Bottone salvataggio -->
 				<Button Text="SALVA NOTA"
 						Command="{Binding SaveCommand}"
 						BackgroundColor="{StaticResource Primary}" 
-						Margin="20,5" 
+						Margin="20,0,20,-5" 
 						TextColor="White"
 						FontAttributes="Bold">
 					<Button.ImageSource>
@@ -560,9 +647,10 @@
 				</Button>
 			</VerticalStackLayout>
 
-			<!-- Bottoni in modalità modifica -->
-			<Grid ColumnDefinitions="*, *" ColumnSpacing="10" Margin="20,10,20,10">
+			<!-- Bottoni visibili in modalità modifica -->
+			<Grid ColumnDefinitions="*, *" ColumnSpacing="10" Margin="20,10,20,20">
 
+				<!-- Bottone elimina se la nota è locale -->
 				<Button Grid.Column="0"
 						Text="ELIMINA"
 						Command="{Binding EliminaNotaCommand}"
@@ -580,6 +668,7 @@
 					</Button.ImageSource>
 				</Button>
 
+				<!-- Bottone carica se la nota è locale -->
 				<Button Grid.Column="0" Grid.ColumnSpan="2"
 						Text="CARICA"
 						Command="{Binding InviaNotaSingolaCommand}"
@@ -614,6 +703,32 @@
 					</Button.Triggers>
 				</Button>
 			</Grid>
+			
+			<Button Text="AGGIUNGI UN'ALTRA SPESA"
+					Command="{Binding AggiungiSpesaModificaCommand}"
+					BackgroundColor="{StaticResource Gray200}" 
+					Margin="20,-10,20,10" 
+					TextColor="Black"
+					IsVisible="False">
+				<Button.CommandParameter>
+					<x:Boolean>True</x:Boolean>
+				</Button.CommandParameter>
+				<Button.ImageSource>
+					<FontImageSource Glyph="{x:Static local:Constants.ADD_EXPENSE_ICON}" 
+									 FontFamily="MaterialIcon" 
+									 Size="24" 
+									 Color="Black"/>
+				</Button.ImageSource>
+				<Button.Triggers>
+					<MultiTrigger TargetType="Button">
+						<MultiTrigger.Conditions>
+							<BindingCondition Binding="{Binding IsEditMode}" Value="True" />
+							<BindingCondition Binding="{Binding CanEdit}" Value="True" />
+						</MultiTrigger.Conditions>
+						<Setter Property="IsVisible" Value="True" />
+					</MultiTrigger>
+				</Button.Triggers>
+			</Button>
 
 			<Button Text="SALVA MODIFICHE"
 					Command="{Binding SalvaModificheCommand}"

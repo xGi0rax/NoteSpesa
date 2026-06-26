@@ -37,6 +37,7 @@ namespace ErgonApi.Controllers
                     return BadRequest("Il login non è valido.");
                 }
 
+                // Controllo autenticazione
                 if (!Utils.AuthenticateRequest(HttpContext.Current.Request)) return Unauthorized();
 
                 using (Db.ergdisEntities ergEnt = new Db.ergdisEntities())
@@ -50,6 +51,7 @@ namespace ErgonApi.Controllers
                     
                     if (utente == null) return Unauthorized();
 
+                    // Lista id note da sincronizzare
                     List<int> keysToSync = new List<int>();
 
                     if (model.from.HasValue)
@@ -70,16 +72,16 @@ namespace ErgonApi.Controllers
                             return Ok(new { keys = keysToSync, values = new List<object>() });
                         }
 
+                        // Ricavo le note dalla tabella app_note_spesa
                         query = query.Where(x => keysToSync.Contains(x.id));
                     }
                     else
                     {
                         Log.Information("Richiesta Note Spesa completa (full sync)");
-
                         query = query.Where(x => x.cod_dip == cod_dip);
                     }
 
-                    var resultList = query.Select(x => new
+                    var rawResultList = query.Select(x => new
                     {
                         x.id,
                         x.cod_dip,
@@ -102,11 +104,37 @@ namespace ErgonApi.Controllers
                         x.partita_iva
                     }).ToList();
 
+                    var tipiNotaSpesa = ergEnt.tabgens.AsNoTracking().Where(x => x.tipo_tab == "TNS").ToList();
+
+                    var resultList = rawResultList.Select(x => new
+                    {
+                        x.id,
+                        x.cod_dip,
+                        x.cod_cli,
+                        x.da_data,
+                        x.a_data,
+                        tipologia = tipiNotaSpesa.FirstOrDefault(t => t.cod_tab == x.tipologia)?.des_cod.Trim() ?? x.tipologia,
+                        x.tipo_tab_tns,
+                        x.nr_dip_ergon,
+                        x.flag_con_cli,
+                        x.foto_scontrino,
+                        x.importo,
+                        x.divisa,
+                        flag_tipo_pag = GetDescrizionePagamento(x.flag_tipo_pag) ?? x.flag_tipo_pag,
+                        x.nr_doc_scontrino,
+                        x.data_scontrino,
+                        x.rag_soc_scontrino,
+                        x.note,
+                        x.flag_cont,
+                        x.partita_iva
+                    }).ToList();
+
                     if (!model.from.HasValue)
                     {
                         keysToSync = resultList.Select(x => x.id).ToList();
                     }
 
+                    // Ritorno id note da aggiornare e risultati
                     Log.Information($"Sincronizzazione completata: {resultList.Count} record inviati.");
                     return Ok(new { keys = keysToSync, values = resultList });
                 }
@@ -115,6 +143,52 @@ namespace ErgonApi.Controllers
             {
                 string realError = ExtractRealError(e);
                 Log.Error($"Errore lettura note spesa personali: {realError}");
+                return InternalServerError();
+            }
+        }
+
+        [HttpPost]
+        [Route("decodifiche")]
+        public IHttpActionResult Decodifiche([FromBody] Parametro model) // Endpoint per recuperare i valori le tipologie e i metodi di pagamento
+        {
+            if (model?.credenziali == null)
+            {
+                return BadRequest("Dati di autenticazione mancanti.");
+            }
+
+            try
+            {
+                if (!Utils.AuthenticateRequest(HttpContext.Current.Request)) return Unauthorized();
+
+                using (Db.ergdisEntities ergEnt = new Db.ergdisEntities())
+                {
+                    var utente = ergEnt.utentiwebs.AsNoTracking().FirstOrDefault(x =>
+                        x.login == model.credenziali.login &&
+                        x.password == model.credenziali.password &&
+                        x.tipo_utente == "LDI");
+
+                    if (utente == null) return Unauthorized();
+
+                    // 1. Recupero le tipologie dalla tabella tabgens
+                    var tipologie = ergEnt.tabgens.AsNoTracking()
+                        .Where(x => x.tipo_tab == "TNS")
+                        .Select(x => new { Descrizione = x.des_cod.Trim() })
+                        .ToList();
+
+                    // 2. Metodi di pagamento
+                    var metodiPagamento = new[]
+                    {
+                        new { Descrizione = "Carta di credito aziendale" },
+                        new { Descrizione = "Carta di credito personale" },
+                        new { Descrizione = "Contanti" }
+                    }.ToList();
+
+                    return Ok(new { Tipologie = tipologie, MetodiPagamento = metodiPagamento });
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Error($"Errore lettura decodifiche: {ExtractRealError(e)}");
                 return InternalServerError();
             }
         }
@@ -212,13 +286,14 @@ namespace ErgonApi.Controllers
 
                                 ergEnt.app_note_spesa.Add(entry);
 
+                                // Salvo le foto dello scontrino in un dizionario
                                 if (!string.IsNullOrEmpty(s.foto_scontrino))
                                     base64Photos.Add(entry, s.foto_scontrino);
                             }
                             
                             ergEnt.SaveChanges(); // Primo salvataggio
 
-                            // Salvataggio fisico e aggiornamento path
+                            // Seconda fase, salvataggio fisico della foto e aggiornamento path
                             if (!string.IsNullOrEmpty(rootPath))
                             {
                                 foreach (var item in base64Photos)
@@ -237,6 +312,7 @@ namespace ErgonApi.Controllers
                                         string targetDirectory = Path.Combine(rootPath, subFolder);
                                         if (!Directory.Exists(targetDirectory)) Directory.CreateDirectory(targetDirectory);
 
+                                        // Il nome del file è composto da idRecord.estensione
                                         string fileName = $"{entry.id}{extension}";
                                         string physicalPath = Path.Combine(targetDirectory, fileName);
 
@@ -312,7 +388,7 @@ namespace ErgonApi.Controllers
                                                                            x.tipo_utente == "LDI").FirstOrDefault();
                     if (utente == null) return Unauthorized();
 
-                    // Recupero parametri per il salvataggio foto
+                    // Recupero parametri
                     var param = ergEnt.app_param.FirstOrDefault();
                     var tipiNotaSpesa = ergEnt.tabgens.AsNoTracking().Where(x => x.tipo_tab == "TNS").ToList();
                     string rootPath = param?.path_scontrini;
@@ -322,12 +398,11 @@ namespace ErgonApi.Controllers
                         Log.Warning("Attenzione: rootPath nullo, il salvataggio delle foto verrà saltato.");
                     }
                     
-
                     bool recordTrovato = false;
 
                     foreach (var s in model.note_spesa)
                     {
-                        // Cerchiamo il record esistente nel database Informix tramite l'ID
+                        // Cerco il record esistente nel database tramite l'ID
                         var entry = ergEnt.app_note_spesa.FirstOrDefault(x => x.id == s.id);
                         if (entry == null)
                         {
@@ -337,10 +412,9 @@ namespace ErgonApi.Controllers
 
                         recordTrovato = true;
 
-                        // Verifico che la nota appartenga effettivamente all'utente loggato (sicurezza)
+                        // Verifico che la nota appartenga effettivamente all'utente loggato
                         if (entry.cod_dip.ToString() != model.credenziali.login) return Unauthorized();
 
-                        // Mappatura tipologia (TNS)
                         var rigaTabgen = tipiNotaSpesa.FirstOrDefault(x => x.des_cod.Trim().ToUpper() == s.tipologia.Trim().ToUpper());
 
                         // Se è una categoria non valida blocco l'operazione
@@ -526,12 +600,28 @@ namespace ErgonApi.Controllers
                                 datiEstratti.NumeroDocumento = GetFieldValue("nr_doc");
                                 datiEstratti.RagioneSociale = GetFieldValue("rag_soc");
                                 datiEstratti.PartitaIva = GetFieldValue("partita_iva");
-                                datiEstratti.OraDocumento = GetFieldValue("ora_doc");
 
                                 string dataString = GetFieldValue("data_doc");
-                                if(DateTime.TryParse(dataString, out DateTime parsedDate))
+                                string oraString = GetFieldValue("ora_doc");
+                                datiEstratti.OraDocumento = oraString;
+
+                                if (DateTime.TryParse(dataString, out DateTime parsedDate))
                                 {
-                                    datiEstratti.DataDocumento = parsedDate;
+                                    DateTime dataPura = new DateTime(
+                                        parsedDate.Year,
+                                        parsedDate.Month,
+                                        parsedDate.Day,
+                                        0, 0, 0,
+                                        DateTimeKind.Unspecified);
+
+                                    if (!string.IsNullOrWhiteSpace(oraString) && TimeSpan.TryParse(oraString, out TimeSpan parsedTime))
+                                    {
+                                        datiEstratti.DataDocumento = dataPura.Add(parsedTime);
+                                    }
+                                    else
+                                    {
+                                        datiEstratti.DataDocumento = dataPura;
+                                    }
                                 }
 
                                 string importoString = GetFieldValue("importo_ivato");
@@ -574,7 +664,6 @@ namespace ErgonApi.Controllers
             }
         }
 
-        #region Metodi di supporto
         private string GetCodicePagamento(string desc)
         {
             if (string.IsNullOrEmpty(desc)) return "";
@@ -584,6 +673,18 @@ namespace ErgonApi.Controllers
                 case "carta di credito personale": return "CP";
                 case "contanti": return "CO";
                 default: return "";
+            }
+        }
+
+        private string GetDescrizionePagamento(string cod)
+        {
+            if (string.IsNullOrEmpty(cod)) return "";
+            switch (cod.ToUpper())
+            {
+                case "CC": return "Carta di credito aziendale";
+                case "CP": return "Carta di credito personale";
+                case "CO": return "Contanti";
+                default: return cod;
             }
         }
 
@@ -658,8 +759,6 @@ namespace ErgonApi.Controllers
             }
             return msg;
         }
-
-        #endregion
 
     }
 }

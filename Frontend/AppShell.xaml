@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="Ergon.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:views="clr-namespace:Ergon.Views"
+    xmlns:local="clr-namespace:Ergon.Services"
+    xmlns:mct="clr-namespace:CommunityToolkit.Maui.Behaviors;assembly=CommunityToolkit.Maui"
+    Title="Ergon"
+    
+    Shell.TitleColor="White"
+    Shell.NavBarIsVisible="True"
+    FlyoutBackgroundColor="White"
+    Shell.ForegroundColor="White"
+    Shell.BackgroundColor="{StaticResource Primary}"
+    Shell.TabBarForegroundColor="{StaticResource Primary}"
+    Shell.TabBarTitleColor="{StaticResource Primary}"
+    Shell.TabBarBackgroundColor="White"
+    Shell.TabBarUnselectedColor="Black">
+
+    <Shell.Behaviors>
+        <mct:StatusBarBehavior StatusBarColor="{StaticResource Primary}" />
+    </Shell.Behaviors>
+    
+    <Shell.Resources>
+        <Style Class="FlyoutItemLayoutStyle" TargetType="Layout" ApplyToDerivedTypes="True">
+            <Setter Property="VisualStateManager.VisualStateGroups">
+                <VisualStateGroupList>
+                    <VisualStateGroup x:Name="CommonStates">
+                        <VisualState x:Name="Normal">
+                            <VisualState.Setters>
+                                <Setter TargetName="FlyoutItemLabel" Property="Label.TextColor" Value="Black" />
+                            </VisualState.Setters>
+                        </VisualState>
+                    </VisualStateGroup>
+                </VisualStateGroupList>
+            </Setter>
+        </Style>
+    </Shell.Resources>
+
+    <Shell.FlyoutHeaderTemplate>
+        <DataTemplate>
+            <VerticalStackLayout Padding="40">
+                <Image Source="ergon.png"/>
+            </VerticalStackLayout>
+        </DataTemplate>
+    </Shell.FlyoutHeaderTemplate>
+
+    <!--<TabBar>
+        <Tab>
+            <ShellContent
+                Title="Timbrature di oggi"
+                ContentTemplate="{DataTemplate views:OggiView}"
+                Route="OggiView"/>
+        </Tab>
+        <Tab>
+            <ShellContent
+                Title="Planning"
+                ContentTemplate="{DataTemplate views:PlanningListView}"
+                Route="PlanningView" 
+                Icon="planning"/>
+        </Tab>
+    </TabBar>-->
+
+    <FlyoutItem FlyoutDisplayOptions="AsMultipleItems">
+        <ShellContent Title="Timbrature di oggi" ContentTemplate="{DataTemplate views:OggiView}" Route="OggiView" x:Name="btn_oggi"/>
+		<ShellContent Title="Planning" ContentTemplate="{DataTemplate views:PlanningListView}" Route="PlanningListView" Icon="planning" />
+	</FlyoutItem>
+
+    <!--<ShellContent
+        Title="Timbrature di oggi"
+        ContentTemplate="{DataTemplate views:OggiView}"
+        Route="OggiView"
+        x:Name="btn_oggi"/>-->
+
+	<ShellContent 
+		Title="Prenotazioni risorse" 
+		ContentTemplate="{DataTemplate views:PrenotazioniListView}" 
+		Route="PrenotazioniListView" 
+		Icon="booking_flyout" />
+
+	<ShellContent 
+	    Title="Note spesa" 
+	    ContentTemplate="{DataTemplate views:NoteSpesaView}" 
+	    Route="NoteSpesaView" 
+	    Icon="receipt_euro" />
+
+	<ShellContent
+        Title="Riepilogo timbrature"
+        ContentTemplate="{DataTemplate views:RiepilogoView}"
+        Route="RiepilogoView" 
+        Icon="history"/>
+
+    <!--<ShellContent
+        Title="Planning"
+        ContentTemplate="{DataTemplate views:PlanningListView}"
+        Route="PlanningListView" 
+        Icon="planning"/>-->
+
+    <ShellContent
+        Title="FAQ"
+        ContentTemplate="{DataTemplate views:FaqView}"
+        Route="FaqView" 
+        Icon="faq"/>
+
+    <ShellContent
+        Title="Informazioni"
+        ContentTemplate="{DataTemplate views:InfoView}"
+        Route="InfoView" 
+        Icon="trace"/>
+
+    <Shell.FlyoutFooter>
+        <VerticalStackLayout Padding="10">
+            <HorizontalStackLayout Spacing="7" Margin="5, 3">
+                <Label Text="{x:Static local:Constants.USER_ICON}" Style="{x:StaticResource MaterialIcon}" VerticalOptions="Center" TextColor="Black"/>
+                <Label Text="{x:Static local:Settings.DesDipendente}" VerticalOptions="Center" FontAttributes="Bold" TextColor="Black"/>
+            </HorizontalStackLayout>
+            <Button ImageSource="logout.svg" Text="Logout" Clicked="Logout" FontAttributes="Bold" TextColor="White"/>
+        </VerticalStackLayout>
+    </Shell.FlyoutFooter>
+
+</Shell>
